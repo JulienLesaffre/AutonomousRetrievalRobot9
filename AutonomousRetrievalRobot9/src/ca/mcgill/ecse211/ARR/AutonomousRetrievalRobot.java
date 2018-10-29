@@ -3,6 +3,11 @@
  */
 package ca.mcgill.ecse211.ARR;
 
+import lejos.hardware.Button;
+import lejos.hardware.ev3.LocalEV3;
+import lejos.hardware.lcd.TextLCD;
+import lejos.hardware.motor.EV3LargeRegulatedMotor;
+
 /**
  * @author JulienLesaffre
  *
@@ -27,12 +32,24 @@ public class AutonomousRetrievalRobot {
 	private static final int[] TG_LL = {0,0}; // lower left hand corner of the green player ring set
 	private static final int[] TG_UR = {0,0}; // upper right hand corner of the green player ring set
 
+	
+	 // Motor objects and robot parameters
 
-	/**
-	 * @param args
-	 */
+	public static final TextLCD lcd = LocalEV3.get().getTextLCD();
+
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+		int buttonChoice;
+		do {
+			lcd.clear(); // clear the display
+			lcd.drawString("      ", 0, 0);
+			lcd.drawString("Start ? ", 0, 1);
+			lcd.drawString("      ", 0, 2);
+
+
+			buttonChoice = Button.waitForAnyPress(); 
+			
+		} while (buttonChoice != Button.ID_ENTER);
+		
 	}
 
 }

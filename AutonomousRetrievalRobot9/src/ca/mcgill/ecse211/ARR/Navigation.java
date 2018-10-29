@@ -7,8 +7,8 @@ import ca.mcgill.ecse211.odometer.*;
 public class Navigation {
 
 	private static final int ROTATE_SPEED = 150;
-	private static final double WHEEL_RAD = 0;
-	private static final double TRACK = 0;
+	public static final double WHEEL_RAD = 0;
+	public static final double TRACK = 0;
 
 
 	private static Odometer odometer;
@@ -18,7 +18,7 @@ public class Navigation {
 	public static final EV3LargeRegulatedMotor rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
 
 
-	public Navigation(double coordinates[][]) throws OdometerExceptions {
+	public Navigation() throws OdometerExceptions {
 		Navigation.odometer = Odometer.getOdometer();
 
 	}
@@ -64,6 +64,43 @@ public class Navigation {
 	// and the method has yet to return; false otherwise.
 	public boolean isNavigating() {
 		return isNavigating;
+	}
+	
+	/**
+	 * 
+	 * @param leftMotor
+	 * @param rightMotor
+	 * @param distance : distance to travel
+	 * @param forwards : if true then it goes forward direction
+	 * @param continueRunning : if true then program does not wait for wheels to stop, false program waits  
+	 */
+	public void moveStraight(EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor, 
+			double distance, int speed, boolean forwards, boolean continueRunning) {
+		int i = 1;
+		if (!forwards) i = -1;
+		leftMotor.setSpeed(speed);
+	    rightMotor.setSpeed(speed);
+	    leftMotor.rotate(convertDistance(WHEEL_RAD, i * distance), true);
+	    rightMotor.rotate(convertDistance(WHEEL_RAD, i *distance), continueRunning);
+	}
+	
+	/**
+	 * This method turns the robot to the right or left depending on direction boolean and turns the robot by the specified
+	 * degrees amount.
+	 * @param left : motor
+	 * @param right : motor
+	 * @param degrees : degrees to turn by
+	 * @param direction : true means turn right, left otherwise
+	 */
+	public void turnRobot(EV3LargeRegulatedMotor left, EV3LargeRegulatedMotor right, 
+			int degrees, int speed, boolean direction, boolean continueRunning) {
+		int i = 1;
+		if (!direction)
+			i = -1;
+		leftMotor.setSpeed(speed);
+		rightMotor.setSpeed(speed);
+		leftMotor.rotate(i * convertAngle(WHEEL_RAD, TRACK, degrees), true);
+		rightMotor.rotate(i * -convertAngle(WHEEL_RAD, TRACK, degrees), continueRunning);
 	}
 
 	private static int convertDistance(double radius, double distance) {

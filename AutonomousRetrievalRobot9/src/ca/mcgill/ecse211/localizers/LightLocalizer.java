@@ -19,21 +19,17 @@ public class LightLocalizer extends Thread {
 	private Odometer odo;
 	private Navigation navigator;
 	private DataController dataCont;
-  	private EV3LargeRegulatedMotor leftMotor;
-  	private EV3LargeRegulatedMotor rightMotor;
 	
-	public LightLocalizer(EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor, 
-			Navigation navigator) throws OdometerExceptions{
+	public LightLocalizer(Navigation navigator) throws OdometerExceptions{
 		this.odo = Odometer.getOdometer();
 		this.navigator = navigator;
 		this.dataCont = DataController.getDataController();
-		this.leftMotor = leftMotor;
-		this.rightMotor = rightMotor;
 	}
 	
 	public void run() {
 		double saveY = 0.0;
 		double lightIntensity;
+		
 		//move forward till detect line 
 		navigator.moveStraight(MAX_DISTANCE, FORWARD_SPEED, true, true);
 		while(true) {

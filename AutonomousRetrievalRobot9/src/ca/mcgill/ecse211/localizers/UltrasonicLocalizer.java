@@ -18,20 +18,17 @@ public class UltrasonicLocalizer extends Thread {
 	private Odometer odo;
 	private Navigation navigator;
 	private DataController dataCont;
-  	private EV3LargeRegulatedMotor leftMotor;
-  	private EV3LargeRegulatedMotor rightMotor;
+
 	
 	/**
 	 * Constructor
 	 * @param leftMotor
 	 * @param rightMotor
 	 */
-	public UltrasonicLocalizer(EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor, Navigation navigator) throws OdometerExceptions {
+	public UltrasonicLocalizer(Navigation navigator) throws OdometerExceptions {
 		this.odo = Odometer.getOdometer();
 		this.dataCont = DataController.getDataController();
 		this.navigator = navigator;
-		this.leftMotor = leftMotor;
-		this.rightMotor = rightMotor;
 	}
 	
 	
@@ -41,10 +38,7 @@ public class UltrasonicLocalizer extends Thread {
 	public void run() {
 		
 	    // reset motors
-	    for (EV3LargeRegulatedMotor motor : new EV3LargeRegulatedMotor[] {leftMotor, rightMotor}) {
-	      motor.stop();
-	      motor.setAcceleration(1000);
-	    }
+	    navigator.stopMotors();
 
 	    // sleep 2 seconds
 	    try {
@@ -56,7 +50,7 @@ public class UltrasonicLocalizer extends Thread {
 		double backWall = 360.0, leftWall = 360.0, dTheta;
 		
 
-		navigator.turnRobot(leftMotor, rightMotor, TURN_ANGLE, ROTATE_SPEED, true,  true);
+		navigator.turnRobot(TURN_ANGLE, ROTATE_SPEED, true,  true);
 		while(true) {
 			d = dataCont.getD();
 			if (d < THRESHOLD + ERROR_MARGIN) {
@@ -72,7 +66,7 @@ public class UltrasonicLocalizer extends Thread {
 			}
 		}
 	
-		navigator.turnRobot(leftMotor, rightMotor, TURN_ANGLE, ROTATE_SPEED, false, true);
+		navigator.turnRobot(TURN_ANGLE, ROTATE_SPEED, false, true);
 		
 	    // sleep 2 seconds
 	    try {
@@ -95,20 +89,13 @@ public class UltrasonicLocalizer extends Thread {
 			}
 		}
 		
-		stopMotors(leftMotor, rightMotor);	//reset motors
+		navigator.stopMotors();	//reset motors
 		backWall = (x1+x2)/2.0;
 		leftWall = (y1+y2)/2.0;
 		dTheta = dThetaFallingEdge(backWall, leftWall);
 		correctAngle(dTheta);
 	}
 
-	
-	public void stopMotors(EV3LargeRegulatedMotor left, EV3LargeRegulatedMotor right) {
-		left.stop();
-		left.setAcceleration(1000);
-		right.stop();
-		right.setAcceleration(1000);
-	}
 	
 	public double dThetaFallingEdge(double backWall, double leftWall) {
 		return 225.0 - (backWall+leftWall)/2.0;
@@ -118,7 +105,7 @@ public class UltrasonicLocalizer extends Thread {
 		double newTheta = (odo.getXYT()[2] + dTheta) % 360;
 		odo.setTheta(newTheta);
 		int turnAngle = (int) (360.0 - (newTheta));
-		navigator.turnRobot(leftMotor, rightMotor, turnAngle,ROTATE_SPEED, true, true);
+		navigator.turnRobot(turnAngle,ROTATE_SPEED, true, true);
 	}
 
 	/**

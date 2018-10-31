@@ -2,6 +2,7 @@ package ca.mcgill.ecse211.ARR;
 
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
+import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorModes;
@@ -15,6 +16,7 @@ public class RingSet extends Thread {
 
 	public static final EV3LargeRegulatedMotor leftMotor = Navigation.leftMotor;
 	public static final EV3LargeRegulatedMotor rightMotor = Navigation.rightMotor;
+	public static final EV3MediumRegulatedMotor ringPickUpMotor = new EV3MediumRegulatedMotor(LocalEV3.get().getPort("C"));
 	
 
 	public RingSet() throws OdometerExceptions {
@@ -33,6 +35,10 @@ public class RingSet extends Thread {
 		// TODO 
 		double [] xy = {x,y};
 		return xy;
+	}
+	
+	public void pickUpRing() {
+		ringPickUpMotor.rotate(180);
 	}
 	
 	private void detectRings() {

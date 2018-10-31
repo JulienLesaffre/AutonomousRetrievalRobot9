@@ -59,6 +59,7 @@ public class AutonomousRetrievalRobot {
 		UltrasonicLocalizer uLocalizer = new UltrasonicLocalizer(navigation);
 		LightLocalizer lLocalizer = new LightLocalizer(navigation);
 		DataController dataCont = DataController.getDataController();
+		Testing test = new Testing();
 
 		@SuppressWarnings("resource")
 		SensorModes usSensor = new EV3UltrasonicSensor(LocalEV3.get().getPort("S1"));
@@ -114,11 +115,11 @@ public class AutonomousRetrievalRobot {
 			}
 			
 			// start navigation
+			test.start();
 
 		}
 
-		while (Button.waitForAnyPress() != Button.ID_ESCAPE)
-			;
+		while (Button.waitForAnyPress() != Button.ID_ESCAPE);
 		System.exit(0);
 
 	}

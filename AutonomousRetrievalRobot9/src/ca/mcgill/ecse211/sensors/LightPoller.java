@@ -4,16 +4,19 @@ import lejos.robotics.SampleProvider;
 
 public class LightPoller extends Thread {
 
-	private SampleProvider lg;
-	private DataController dataCont;
-	private float[] lightData;
-
+	private SampleProvider leftSampleProvider;
+	private SampleProvider rightSampleProvider;
+	private LightController cont;
+	private float[] colorLeft;
+	private float[] colorRight;
 	private static int SLEEP_TIME = 50;
 
-	public LightPoller(SampleProvider lg, float[] lightData, DataController dataCont) {
-		this.lg = lg;
-		this.dataCont = dataCont;
-		this.lightData = lightData;
+	public LightPoller(SampleProvider leftSampleProvider, SampleProvider rightSampleProvider, LightController lightCont) {
+		this.leftSampleProvider = leftSampleProvider;
+		this.rightSampleProvider = rightSampleProvider;
+		colorLeft = new float[leftSampleProvider.sampleSize()];
+		colorRight = new float[rightSampleProvider.sampleSize()];
+		this.cont = lightCont;
 	}
 
 
@@ -23,12 +26,11 @@ public class LightPoller extends Thread {
 	 * 
 	 * @see java.lang.Thread#run()
 	 */
-	public void run() {
-		int light;
+	public void run(){
 		while (true) {
-			lg.fetchSample(lightData, 0); // acquire data
-			light = (int) (lightData[0] * 100); // extract from buffer, cast to int
-			dataCont.setL(light); // now take action depending on value
+			leftSampleProvider.fetchSample(colorLeft, 0); // acquire data
+			rightSampleProvider.fetchSample(colorRight, 0); 
+			cont.processLightData(colorLeft[0], colorRight[0]); // now take action depending on value
 			try {
 				Thread.sleep(SLEEP_TIME);
 			} catch (Exception e) {

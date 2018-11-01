@@ -2,126 +2,145 @@ package ca.mcgill.ecse211.localizers;
 
 import ca.mcgill.ecse211.ARR.Navigation;
 import ca.mcgill.ecse211.odometer.*;
-import ca.mcgill.ecse211.sensors.DataController;
-import lejos.hardware.motor.EV3LargeRegulatedMotor;
+import ca.mcgill.ecse211.sensors.*;
+
 
 /**
- * This class is used to localize the angle of the robot using the Ultrasonic sensor
+ * this class does not need to be passed in odometer because odometer is a singleton
+ * so it can access the odometer by retrieving the only one, hence just make sure there is
+ * one initialized to start with.
+ * @author fumaster101
  *
  */
-public class UltrasonicLocalizer extends Thread {
-	
-	private static final int THRESHOLD = 39;
-	private static final int ERROR_MARGIN = 6;
-  	private static final int ROTATE_SPEED = 40;
-  	private static final int TURN_ANGLE = 360;
-	private Odometer odo;
-	private Navigation navigator;
-	private DataController dataCont;
+public class UltrasonicLocalizer {
 
-	
-	/**
-	 * Constructor
-	 * @param leftMotor
-	 * @param rightMotor
-	 */
-	public UltrasonicLocalizer(Navigation navigator) throws OdometerExceptions {
-		this.odo = Odometer.getOdometer();
-		this.dataCont = DataController.getDataController();
-		this.navigator = navigator;
+	private static final int USLOC_MOTOR_SPEED = 80;
+	private static final int USLOC_MOTOR_ACCELERATION = 1000;
+	private static final int D_THRESHHOLD = 30;
+	private static final int NOISE_MARGIN = 5;
+	public static double ALPHA = 0;
+	public static double BETA = 0;
+	public static double FINAL_ANGLE = 0;
+	public static boolean isUSLocalizing = false;			
+
+
+	public UltrasonicLocalizer() {
+		
 	}
-	
-	
+
+
 	/**
-	 * This thread localizes the robot using the falling edge procedure
+	 * Performs falling edge localization
+	 * @throws OdometerExceptions 
 	 */
-	public void run() {
+	public void fallingEdge() throws OdometerExceptions{
 		
-	    // reset motors
-	    navigator.stopMotors();
+		isUSLocalizing = true;
+		
+		Navigation.setSpeedAcceleration(USLOC_MOTOR_SPEED, USLOC_MOTOR_ACCELERATION);
+		
+		//Instantiate odometer storage and set theta of odometer to 0
+		double[] odometer = {0,0,0};
+		boolean isAboveThresh = false;
+		double angleCorrection = 0;
+		Odometer.getOdometer().setTheta(0);
 
-	    // sleep 2 seconds
-	    try {
-	      Thread.sleep(2000);
-	    } catch (InterruptedException e) {
-	    }
-		
-		double x1 = 1.0, x2 = 1.0, y1 = 1.0, y2 = 1.0, d;
-		double backWall = 360.0, leftWall = 360.0, dTheta;
-		
+		// Checks orientation or sets orientation to perform localization
+		if (USController.distance > (D_THRESHHOLD + NOISE_MARGIN)) {
+			isAboveThresh = true;
+		} else {
+			findWallAbove();
+			isAboveThresh = true;
+		}
 
-		navigator.turnRobot(TURN_ANGLE, ROTATE_SPEED, true,  true);
-		while(true) {
-			d = dataCont.getD();
-			if (d < THRESHOLD + ERROR_MARGIN) {
-				x1 = odo.getXYT()[2];
-				while(true) {
-					d = dataCont.getD();
-					if (d < THRESHOLD - ERROR_MARGIN) {
-						x2 = odo.getXYT()[2];
-						break;
-					}
-				}
+		// Find first falling edge
+		while (true) {
+
+			// Move forward and get odometer data
+			odometer = Odometer.getOdometer().getXYT();
+			Navigation.leftMotor.forward();
+			Navigation.rightMotor.backward();
+
+			// If is falling and you are above the threshold
+			// then store theta as alpha and stop turning
+			if (isFalling() && isAboveThresh) {
+				Navigation.leftMotor.stop(true);
+				Navigation.rightMotor.stop(false);
+				ALPHA = odometer[2];
+				isAboveThresh = false;
 				break;
 			}
 		}
-	
-		navigator.turnRobot(TURN_ANGLE, ROTATE_SPEED, false, true);
-		
-	    // sleep 2 seconds
-	    try {
-	      Thread.sleep(2000);
-	    } catch (InterruptedException e) {
-	    }
-		
-		while(true) {
-			d = dataCont.getD();
-			if (d < THRESHOLD + ERROR_MARGIN) {
-				y1 = odo.getXYT()[2];
-				while(true) {
-					d = dataCont.getD();
-					if (d < THRESHOLD - ERROR_MARGIN) {
-						y2 = odo.getXYT()[2];
-						break;
-					}
-				}
+
+		// Find second falling edge
+		while (true) {
+
+			// Go backwards and get odometer data
+			odometer = Odometer.getOdometer().getXYT();
+			Navigation.leftMotor.backward();
+			Navigation.rightMotor.forward();
+
+			// Set above thresh to true if you are above the threshold 
+			if (USController.distance > (D_THRESHHOLD + NOISE_MARGIN)) {
+				isAboveThresh = true;
+			}
+
+			// If is falling and you are above the threshold
+			// then store 180-theta as beta and stop turning
+			if (isFalling() && isAboveThresh) {
+				Navigation.leftMotor.stop(true);
+				Navigation.rightMotor.stop(false);
+				BETA = odometer[2];
 				break;
 			}
 		}
-		
-		navigator.stopMotors();	//reset motors
-		backWall = (x1+x2)/2.0;
-		leftWall = (y1+y2)/2.0;
-		dTheta = dThetaFallingEdge(backWall, leftWall);
-		correctAngle(dTheta);
+
+		// Alpha and Beta algorithms
+		if (ALPHA < BETA) {
+			angleCorrection = 40 - ((ALPHA + BETA) / 2); 
+		} else {
+			angleCorrection = 220 - ((ALPHA + BETA) / 2);
+		} 
+
+		// Set theta to 0 to apply correction
+		// from current reference angle
+		//Odometer.getOdometer().setTheta(0);
+		FINAL_ANGLE = 180-(angleCorrection + odometer[2]);
+		Navigation.turnTo(FINAL_ANGLE);
+
+		isUSLocalizing = false;
 	}
 
-	
-	public double dThetaFallingEdge(double backWall, double leftWall) {
-		return 225.0 - (backWall+leftWall)/2.0;
-	}
-	
-	public void correctAngle(double dTheta) {
-		double newTheta = (odo.getXYT()[2] + dTheta) % 360;
-		odo.setTheta(newTheta);
-		int turnAngle = (int) (360.0 - (newTheta));
-		navigator.turnRobot(turnAngle,ROTATE_SPEED, true, true);
-	}
 
 	/**
-	 * This method allows the conversion of a distance to the total rotation of each wheel need to
-	 * cover that distance.
-	 * 
-	 * @param radius
-	 * @param distance
-	 * @return
+	 * Sets orientation of robot so it can perform the localization with falling edges 
+	 * Makes sure that you are above detectable threshold (i.e facing far from wall)
+	 * before you read for falling edge
 	 */
-	private static int convertDistance(double radius, double distance) {
-		return (int) ((180.0 * distance) / (Math.PI * radius));
+	void findWallAbove() {
+		while (true) {
+			Navigation.leftMotor.forward();
+			Navigation.rightMotor.backward();
+			if (USController.distance > (D_THRESHHOLD + NOISE_MARGIN)) {
+				Navigation.leftMotor.stop(true);
+				Navigation.rightMotor.stop(false);
+				break;
+			}
+		}
 	}
-	
-	private static int convertAngle(double radius, double width, double angle) {
-		return convertDistance(radius, Math.PI * width * angle / 360.0);
+
+
+	/**
+	 * Checks if fallingEdge, i.e distance
+	 * drops below the threshold
+	 * @return boolean: if fallingEdge or not
+	 */
+	boolean isFalling() {
+		if (USController.distance < (D_THRESHHOLD - NOISE_MARGIN)) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 }

@@ -1,73 +1,65 @@
 package ca.mcgill.ecse211.ARR;
 
-import java.text.DecimalFormat;
-import ca.mcgill.ecse211.odometer.Odometer;
-import ca.mcgill.ecse211.odometer.OdometerExceptions;
+import lejos.hardware.Button;
+import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.lcd.TextLCD;
 
 /**
- * This class is used to display the content of the odometer variables (x, y, Theta)
+ * Should not be thread, we should use this class to debug only 
+ * and call on it from other methods if we want to display something
  */
-public class Display implements Runnable {
+public class Display {
 
-  private Odometer odo;
-  private TextLCD lcd;
-  private double[] position;
-  private final long DISPLAY_PERIOD = 25;
-  private long timeout = Long.MAX_VALUE;
+	public static final TextLCD lcd = LocalEV3.get().getTextLCD();
 
-  /**
-   * This is the class constructor
-   * 
-   * @param odoData
-   * @throws OdometerExceptions 
-   */
-  public Display(TextLCD lcd) throws OdometerExceptions {
-    odo = Odometer.getOdometer();
-    this.lcd = lcd;
-  }
+	/**
+	 * This is the class constructor
+	 * 
+	 * @param lcd
+	 * @throws OdometerExceptions 
+	 */
+	public Display() {
+	}
 
-  /**
-   * This is the overloaded class constructor
-   * 
-   * @param odoData
-   * @throws OdometerExceptions 
-   */
-  public Display(TextLCD lcd, long timeout) throws OdometerExceptions {
-    odo = Odometer.getOdometer();
-    this.timeout = timeout;
-    this.lcd = lcd;
-  }
+	/**
+	 * this method asks user to start
+	 * must press right button to start then clears display and executes prog
+	 */
+	public static void displayStartScreen() {
+		lcd.clear();
+		int buttonChoice;
+		do {
+			lcd.drawString("Start ? ", 0, 0);
+			buttonChoice = Button.waitForAnyPress(); 
+		} while (buttonChoice != Button.ID_RIGHT);
+		lcd.clear();
+	}
+	
+	/**
+	 * this method is used to debug us localization
+	 */
+	public static void displayUSLocalization(int d, double a, double b, double result) {
+		lcd.clear();
+		lcd.drawString("Distance: " + d, 0, 1);
+		lcd.drawString("Alpha: " + a, 0, 2);
+		lcd.drawString("Beta: " + b, 0, 3);
+		lcd.drawString("Final: " + result, 0, 4);
+	}
+	
+	
+	public static void displayLightLocalization(float left, float right, double x, double y, double theta) {
+		lcd.clear();
+		lcd.drawString("colorLeft: " + left, 0, 1);
+		lcd.drawString("colorRight: " + right, 0, 2);
+		lcd.drawString("x: " + x, 0, 3);
+		lcd.drawString("y: " + y, 0, 4);
+		lcd.drawString("theta: " + theta, 0, 5);
+	}
 
-  public void run() {
-    
-    lcd.clear();
-    
-    long updateStart, updateEnd;
 
-    long tStart = System.currentTimeMillis();
-    do {
-      updateStart = System.currentTimeMillis();
 
-      // Retrieve x, y and Theta information
-      position = odo.getXYT();
-      
-      // Print x,y, and theta information
-      DecimalFormat numberFormat = new DecimalFormat("######0.00");
-      lcd.drawString("X: " + numberFormat.format(position[0]), 0, 0);
-      lcd.drawString("Y: " + numberFormat.format(position[1]), 0, 1);
-      lcd.drawString("T: " + numberFormat.format(position[2]), 0, 2);    
-      // this ensures that the data is updated only once every period
-      updateEnd = System.currentTimeMillis();
-      if (updateEnd - updateStart < DISPLAY_PERIOD) {
-        try {
-          Thread.sleep(DISPLAY_PERIOD - (updateEnd - updateStart));
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-    } while ((updateEnd - tStart) <= timeout);
 
-  }
+
+
 
 }

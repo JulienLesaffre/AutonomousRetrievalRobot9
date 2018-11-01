@@ -7,7 +7,12 @@ import ca.mcgill.ecse211.odometer.Odometer;
 import ca.mcgill.ecse211.odometer.OdometerExceptions;
 import ca.mcgill.ecse211.sensors.LightController;
 
-public class LightLocalizer extends Thread implements Runnable {
+/**
+ * This class is used by main class to call localize method
+ * to perform light localization.
+ *
+ */
+public class LightLocalizer {
 
 	// Instantiate Color sensor and other variables
 	static double newColorLeft;
@@ -35,6 +40,16 @@ public class LightLocalizer extends Thread implements Runnable {
 	}
 
 	
+	/**
+	 * This method assumes the ultrasonic localization has finished and robot is 
+	 * in the middle of the starting tile. It first moves forward and stops robot 
+	 * with light sensors ontop of perpendicular line ahead. Moves by offset of 
+	 * center to light sensors, turns right and does the same for the next perpendicular
+	 * line. Once done corrects the odometer readings.
+	 * 
+	 * @param startingCorner : starting corner of robot, main must pass this in
+	 * @throws OdometerExceptions
+	 */
 	public void localize(int startingCorner) throws OdometerExceptions {
 		
 		isLightLocalizing = true;
@@ -55,6 +70,13 @@ public class LightLocalizer extends Thread implements Runnable {
 	}
 
 	
+	/**
+	 * Based on starting corner, the same localization technique is performed
+	 * by going forward to first line then right to second line. Using this 
+	 * information and the size of the field we can correct the odometer readings.
+	 * 
+	 * @param startingCorner
+	 */
 	private void correctOdometer(int startingCorner) {
 		//Correct the odometer depending on the starting corner
 		switch(startingCorner) {
@@ -82,6 +104,9 @@ public class LightLocalizer extends Thread implements Runnable {
 	}
 	
 
+	/**
+	 * This method finds the second right line for correcting the odometer
+	 */
 	public static void findRightLine() {
 		
 		// Track how many lines found by left and right sensor
@@ -126,6 +151,10 @@ public class LightLocalizer extends Thread implements Runnable {
 
 	
 	
+	/**
+	 * This method find the first line ahead when starting the localization.
+	 * @throws OdometerExceptions
+	 */
 	public static void findLineAhead() throws OdometerExceptions {
 		// Track how many lines found by left and right sensor
 		int foundLeft = 0;

@@ -19,6 +19,7 @@ import lejos.robotics.SampleProvider;
 
 /**
  * @author JulienLesaffre
+ * @author FouadBitar
  *
  */
 public class AutonomousRetrievalRobot {
@@ -39,6 +40,8 @@ public class AutonomousRetrievalRobot {
 	 * method to start and run odometer thread
 	 * and initializes all the static class variables that the main program will use
 	 * in the correct order
+	 * 
+	 * @throws OdometerExceptions
 	 */
 	@SuppressWarnings("resource")
 	private static void initialize() throws OdometerExceptions{
@@ -71,7 +74,7 @@ public class AutonomousRetrievalRobot {
 	
 
 	
-	/**
+	/*
 	 * Writing main in specific methods so that
 	 * merging will not cause any issues
 	 */
@@ -94,16 +97,11 @@ public class AutonomousRetrievalRobot {
 		// 1) 
 		
 		
-		
 	}
 
 	public static void main(String[] args) {
 		
-		
-		
 
-		
-		
 	}
 
 }

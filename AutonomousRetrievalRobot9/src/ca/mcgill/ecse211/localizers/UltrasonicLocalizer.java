@@ -6,10 +6,9 @@ import ca.mcgill.ecse211.sensors.*;
 
 
 /**
- * this class does not need to be passed in odometer because odometer is a singleton
- * so it can access the odometer by retrieving the only one, hence just make sure there is
- * one initialized to start with.
- * @author fumaster101
+ * This class controls the ultrasonic localization part. It assumes the 
+ * us sensor is polling when calling the fallingEdge main method of 
+ * localizing.
  *
  */
 public class UltrasonicLocalizer {

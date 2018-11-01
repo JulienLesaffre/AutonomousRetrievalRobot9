@@ -5,8 +5,9 @@ import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.lcd.TextLCD;
 
 /**
- * Should not be thread, we should use this class to debug only 
- * and call on it from other methods if we want to display something
+ * This class is used to create specific static methods for displaying 
+ * things on the lcd screen. Lcd is static variable initialized during 
+ * compile so as not to mix things up.
  */
 public class Display {
 
@@ -15,8 +16,6 @@ public class Display {
 	/**
 	 * This is the class constructor
 	 * 
-	 * @param lcd
-	 * @throws OdometerExceptions 
 	 */
 	public Display() {
 	}
@@ -36,7 +35,11 @@ public class Display {
 	}
 	
 	/**
-	 * this method is used to debug us localization
+	 * this method is used to display the parameters for the ultrasonic localization.
+	 * @param d : distance
+	 * @param a : alpha - the first falling edge
+	 * @param b : beta - the second falling edge
+	 * @param result : the final angle
 	 */
 	public static void displayUSLocalization(int d, double a, double b, double result) {
 		lcd.clear();
@@ -47,6 +50,14 @@ public class Display {
 	}
 	
 	
+	/**
+	 * this method is used to display the parameters for the light localization.
+	 * @param left : left light sensor data
+	 * @param right : right light sensor data
+	 * @param x : x coordinate
+	 * @param y : y coordinate
+	 * @param theta : angle
+	 */
 	public static void displayLightLocalization(float left, float right, double x, double y, double theta) {
 		lcd.clear();
 		lcd.drawString("colorLeft: " + left, 0, 1);
@@ -55,11 +66,6 @@ public class Display {
 		lcd.drawString("y: " + y, 0, 4);
 		lcd.drawString("theta: " + theta, 0, 5);
 	}
-
-
-
-
-
 
 
 }

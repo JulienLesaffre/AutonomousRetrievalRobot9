@@ -9,7 +9,9 @@ import ca.mcgill.ecse211.sensors.LightController;
 
 /**
  * This class handles the movement of the robot
- * it initializes the motors and all motor access should be through this class
+ * it initializes the motors and all motor access should be through this class.
+ * Methods are defined as static and any other class can refer statically
+ * to control the movement of robot.
  *
  */
 public class Navigation {
@@ -57,18 +59,25 @@ public class Navigation {
 	
 	
 	/**
-	 * This method assumes the robot has just localized and is starting, or has dropped off ring
-	 * and is going to ring holder again.
+	 * This method asssumes the robot has finished localizing, it takes its coordinates
+	 * and calculates the trajectory to the tunnel. The trajectory is based on horizontal
+	 * and vertical movements only. The robot travels x and y to reach the tile before
+	 * the start of the tunnel where it is able to localize all odometer data accurately.
+	 * This way the robot will be accurately within one tile of the tunnel in order to travel
+	 * through without problems.
 	 * 
-	 * - it only travels in straight paths moving through middle of tiles
+	 * Once x and y travel is calculated, it repeatedly calls on travelToWithCorrection to 
+	 * move while constantly correcting using the sensors.
 	 */
-	//find the best trajectory based on 
-	// 1) location and heading of robot
-	// 2) the location of the tunnel 
-	// 3) size and type of region (i.e. green means its tunnel is in region)
 	public static void travel_Start_To_Tunnel() {
 		
-
+		//This method assumes the robot has just localized and is starting, or has dropped off ring
+		// and is going to ring holder again.
+		//find the best trajectory based on 
+		// 1) location and heading of robot
+		// 2) the location of the tunnel 
+		// 3) size and type of region (i.e. green means its tunnel is in region)
+		
 		//robot starts at outer edge of corner tile, if tunnel is on the +-1 tile on either x or y axis, go up or down by half tile then travel
 		//if tunnel is more than +1 difference, then travel along the lines (3 and larger)
 		// - for both cases, the final movement should be towards direction parallel to tunnel
@@ -110,13 +119,18 @@ public class Navigation {
 	
 	
 	/**
-	 * This method makes robot move in the direction of the
-	 * waypoint whose coordinates are passed as arguments
+	 * This method makes the robot move in the direction of the
+	 * waypoint whose coordinates are passed as arguments. The robot
+	 * moves until a perpendicular line is crossed where the first sensor
+	 * to cross the line that motor will stop while the other wheel moves until
+	 * that side's sensor picks up the same line, correcting the robots heading.
+	 * The method expects the robot to initially be traveling horizontally or vertically.
 	 * 
-	 * light polling must be on for this to work
+	 * Assumption: the two front light sensors must be polling
 	 * 
-	 * @param x
-	 * @param y
+	 * @param x : x coordinate
+	 * @param y : y coordinate
+	 * @throws OdometerExceptions
 	 */ 
 	public static void travelToWithCorrection(double x, double y) throws OdometerExceptions {
 		// Define variables
@@ -196,7 +210,8 @@ public class Navigation {
 	
 	
 	/**
-	 * this method finds out if the tunnel is vertical or horizontal and sets the static variable
+	 * This method finds out if the tunnel is vertical or horizontal and sets the static variable.
+	 * Used by travel_Start_To_Tunnel method to calculate ideal trajectory.
 	 */
 	public static void findTunnelHeading() {
 		int differenceInXCoord = BRR_LL[0] - BRR_UR[0];
@@ -205,10 +220,11 @@ public class Navigation {
 	}
 	
 	/**
-	 * this method checks the heading: 
-	 * 	if its vertical the midpoint the lower left coordinate and add half to the x
-	 *	if its horizontal the midpoint is the lower left and add half to the y
-	 * @return midpoint coordinates in actual distance measurement
+	 * This method finds and returns the midpoint of the start of the tunnel relative 
+	 * to the starting zone and team our robot is on. It assumes the find tunnel heading
+	 * is already called and heading is calculated.
+	 * 
+	 * @return midpoint: double[] coordinates in actual distance measurement
 	 */
 	public static double[] findTunnelMidpoint() {
 		double[] midpoint = {0,0};
@@ -246,8 +262,7 @@ public class Navigation {
 	 * This method causes the robot to turn (on point) to the absolute heading
 	 * theta. This method should turn a MINIMAL angle to its target.
 	 * 
-	 * @param theta:
-	 *            theta angle
+	 * @param theta:theta angle
 	 */
 	public static void turnTo(double theta) {
 		if (theta >= 180) {
@@ -262,8 +277,6 @@ public class Navigation {
 
 	}
 	
-
-
 
 	/**
 	 * 
@@ -298,6 +311,11 @@ public class Navigation {
 		rightMotor.stop(true);
 	}
 	
+	/**
+	 * This method sets the speed and acceleration of the robot
+	 * @param speed
+	 * @param acceleration
+	 */
 	public static void setSpeedAcceleration(int speed, int acceleration) {
 		Navigation.leftMotor.setAcceleration(acceleration);
 		Navigation.rightMotor.setAcceleration(acceleration);

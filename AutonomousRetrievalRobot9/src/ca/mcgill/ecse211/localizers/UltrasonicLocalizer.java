@@ -1,8 +1,9 @@
 package ca.mcgill.ecse211.localizers;
 
+import ca.mcgill.ecse211.ARR.Display;
 import ca.mcgill.ecse211.ARR.Navigation;
 import ca.mcgill.ecse211.odometer.*;
-import ca.mcgill.ecse211.sensors.*;
+import lejos.robotics.SampleProvider;
 
 
 /**
@@ -20,13 +21,34 @@ public class UltrasonicLocalizer {
 	public static double ALPHA = 0;
 	public static double BETA = 0;
 	public static double FINAL_ANGLE = 0;
-	public static boolean isUSLocalizing = false;			
+	private static final int FILTER_OUT = 15;
+	private int filterControl;
+	public float[] usData;
+	public static int distance;
+	public static boolean isUSLocalizing = false;	
+	
+	private static SampleProvider usSample;
 
 
-	public UltrasonicLocalizer() {
-		
+	public UltrasonicLocalizer(SampleProvider usSampleProvider) {
+		usSample = usSampleProvider;
 	}
 
+	public void processUSData(int d) {
+		// filter bad values
+		if (distance >= 255 && filterControl < FILTER_OUT) {
+			filterControl++;
+		} else if (distance >= 255) {
+			distance = d;
+		} else {
+			filterControl = 0;
+			distance = d;
+		}
+		// Print values for debugging
+		if(UltrasonicLocalizer.isUSLocalizing) {
+			Display.displayUSLocalization(distance, ALPHA, BETA, FINAL_ANGLE);
+		} 
+	}
 
 	/**
 	 * Performs falling edge localization
@@ -43,9 +65,12 @@ public class UltrasonicLocalizer {
 		boolean isAboveThresh = false;
 		double angleCorrection = 0;
 		Odometer.getOdometer().setTheta(0);
+		
+		usSample.fetchSample(usData, 0); // acquire data
+		distance = (int) (usData[0] * 100.0); // extract from buffer, cast to int
 
 		// Checks orientation or sets orientation to perform localization
-		if (USController.distance > (D_THRESHHOLD + NOISE_MARGIN)) {
+		if (distance > (D_THRESHHOLD + NOISE_MARGIN)) {
 			isAboveThresh = true;
 		} else {
 			findWallAbove();
@@ -54,7 +79,10 @@ public class UltrasonicLocalizer {
 
 		// Find first falling edge
 		while (true) {
-
+			
+			usSample.fetchSample(usData, 0); // acquire data
+			processUSData((int) (usData[0] * 100.0)); // extract from buffer, cast to int, process data
+			
 			// Move forward and get odometer data
 			odometer = Odometer.getOdometer().getXYT();
 			Navigation.leftMotor.forward();
@@ -62,7 +90,7 @@ public class UltrasonicLocalizer {
 
 			// If is falling and you are above the threshold
 			// then store theta as alpha and stop turning
-			if (isFalling() && isAboveThresh) {
+			if (isFalling(distance) && isAboveThresh) {
 				Navigation.leftMotor.stop(true);
 				Navigation.rightMotor.stop(false);
 				ALPHA = odometer[2];
@@ -74,19 +102,22 @@ public class UltrasonicLocalizer {
 		// Find second falling edge
 		while (true) {
 
+			usSample.fetchSample(usData, 0); // acquire data
+			processUSData((int) (usData[0] * 100.0)); // extract from buffer, cast to int, process data
+			
 			// Go backwards and get odometer data
 			odometer = Odometer.getOdometer().getXYT();
 			Navigation.leftMotor.backward();
 			Navigation.rightMotor.forward();
 
 			// Set above thresh to true if you are above the threshold 
-			if (USController.distance > (D_THRESHHOLD + NOISE_MARGIN)) {
+			if (distance > (D_THRESHHOLD + NOISE_MARGIN)) {
 				isAboveThresh = true;
 			}
 
 			// If is falling and you are above the threshold
 			// then store 180-theta as beta and stop turning
-			if (isFalling() && isAboveThresh) {
+			if (isFalling(distance) && isAboveThresh) {
 				Navigation.leftMotor.stop(true);
 				Navigation.rightMotor.stop(false);
 				BETA = odometer[2];
@@ -120,7 +151,7 @@ public class UltrasonicLocalizer {
 		while (true) {
 			Navigation.leftMotor.forward();
 			Navigation.rightMotor.backward();
-			if (USController.distance > (D_THRESHHOLD + NOISE_MARGIN)) {
+			if (distance > (D_THRESHHOLD + NOISE_MARGIN)) {
 				Navigation.leftMotor.stop(true);
 				Navigation.rightMotor.stop(false);
 				break;
@@ -134,8 +165,8 @@ public class UltrasonicLocalizer {
 	 * drops below the threshold
 	 * @return boolean: if fallingEdge or not
 	 */
-	boolean isFalling() {
-		if (USController.distance < (D_THRESHHOLD - NOISE_MARGIN)) {
+	boolean isFalling(int d) {
+		if (d < (D_THRESHHOLD - NOISE_MARGIN)) {
 			return true;
 		} else {
 			return false;

@@ -7,15 +7,19 @@ import ca.mcgill.ecse211.localizers.LightLocalizer;
 import ca.mcgill.ecse211.localizers.UltrasonicLocalizer;
 import ca.mcgill.ecse211.odometer.Odometer;
 import ca.mcgill.ecse211.odometer.OdometerExceptions;
-import ca.mcgill.ecse211.sensors.LightController;
-import ca.mcgill.ecse211.sensors.LightPoller;
-import ca.mcgill.ecse211.sensors.USController;
-import ca.mcgill.ecse211.sensors.UltrasonicPoller;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorModes;
 import lejos.robotics.SampleProvider;
+
+/*
+//////////////
+////TODO//////
+ * check if turnto method works properly, it might do 360 turns because the odometer is already off and it thinks its heading another direction
+/////////////
+*/
+
 
 /**
  * @author JulienLesaffre
@@ -25,15 +29,14 @@ import lejos.robotics.SampleProvider;
 public class AutonomousRetrievalRobot {
 	
 
-	
 	static Odometer odometer = null;
 	static Navigation nav = null;
-	static USController usController;
-	static UltrasonicPoller usPoller;
 	static UltrasonicLocalizer usLocalizer;
-	static LightController lightController;
-	static LightPoller lightPoller;
 	static LightLocalizer lightLocalizer;
+	
+	private static SampleProvider leftSampleProvider;
+	private static SampleProvider rightSampleProvider;
+	private static SampleProvider usSampleProvider;
 
 
 	/**
@@ -50,25 +53,21 @@ public class AutonomousRetrievalRobot {
 
 		Thread odoThread = new Thread(odometer);
 		odoThread.start();
-
-		nav = new Navigation(); 					//navigation must be after Odometer created
-		usController = new USController();
-		lightController = new LightController();
-		usLocalizer = new UltrasonicLocalizer();
-		lightLocalizer = new LightLocalizer();
 		
-		
-		//us poller 
-		SensorModes usSensor = new EV3UltrasonicSensor(LocalEV3.get().getPort("S1"));
-		SampleProvider usDistance = usSensor.getMode("Distance");                                           
-		usPoller = new UltrasonicPoller(usDistance, usController);			
-		
-		//light poller
+		//light samplers
 		SensorModes myColorLeft = new EV3ColorSensor(LocalEV3.get().getPort("S2"));
-		SampleProvider myColorSampleLeft = myColorLeft.getMode("Red");
+		leftSampleProvider = myColorLeft.getMode("Red");
 		SensorModes myColorRight = new EV3ColorSensor(LocalEV3.get().getPort("S3"));
-		SampleProvider myColorSampleRight = myColorRight.getMode("Red");
-		lightPoller = new LightPoller(myColorSampleLeft, myColorSampleRight, lightController);
+		rightSampleProvider = myColorRight.getMode("Red");
+		//us sampler 
+		SensorModes usSensor = new EV3UltrasonicSensor(LocalEV3.get().getPort("S1"));
+		usSampleProvider = usSensor.getMode("Distance");       
+
+		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer); 
+		
+		//localizers
+		usLocalizer = new UltrasonicLocalizer(usSampleProvider);
+		lightLocalizer = new LightLocalizer(leftSampleProvider, rightSampleProvider);
 		
 	}
 	
@@ -84,24 +83,19 @@ public class AutonomousRetrievalRobot {
 		
 		initialize(); 
 		
-		usPoller.start();
+		
 		usLocalizer.fallingEdge();
-		//stop the us poller
-		//start light poller and localize
-		lightPoller.start();
+
 		lightLocalizer.localize(Navigation.RedCorner); 
 
 		
 		
-		//start loop of execution
-		// 1) 
-		
 		
 	}
 
+	
+	
 	public static void main(String[] args) {
-		
-
 	}
 
 }

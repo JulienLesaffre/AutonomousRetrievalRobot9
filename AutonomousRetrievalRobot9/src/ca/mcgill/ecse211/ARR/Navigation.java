@@ -2,9 +2,8 @@ package ca.mcgill.ecse211.ARR;
 
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
+import lejos.robotics.SampleProvider;
 import ca.mcgill.ecse211.odometer.*;
-import ca.mcgill.ecse211.sensors.LightController;
-
 
 
 /**
@@ -37,6 +36,7 @@ public class Navigation {
 	
 	
 	private static final int ROTATE_SPEED = 100;
+	private static final int ROTATE_ACC = 1000;
 	private static final int NAV_WITH_CORR_SPEED = 130;
 	private static final int NAV_WITH_CORR_ACCEL = 1000;
 	public static final double WHEEL_RAD = 0;
@@ -50,10 +50,16 @@ public class Navigation {
 
 	public static final EV3LargeRegulatedMotor leftMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
 	public static final EV3LargeRegulatedMotor rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
+	
+	
+	private static SampleProvider leftSampleProvider;
+	private static SampleProvider rightSampleProvider;
 
 	
-	public Navigation() throws OdometerExceptions {
-		Navigation.odometer = Odometer.getOdometer();
+	public Navigation(SampleProvider leftLight, SampleProvider rightLight, Odometer odo) throws OdometerExceptions {
+		Navigation.odometer = odo;
+		leftSampleProvider = leftLight;
+		rightSampleProvider = rightLight;
 	}
 	
 	
@@ -69,52 +75,178 @@ public class Navigation {
 	 * Once x and y travel is calculated, it repeatedly calls on travelToWithCorrection to 
 	 * move while constantly correcting using the sensors.
 	 */
-	public static void travel_Start_To_Tunnel() {
-		
-		//This method assumes the robot has just localized and is starting, or has dropped off ring
-		// and is going to ring holder again.
-		//find the best trajectory based on 
-		// 1) location and heading of robot
-		// 2) the location of the tunnel 
-		// 3) size and type of region (i.e. green means its tunnel is in region)
-		
-		//robot starts at outer edge of corner tile, if tunnel is on the +-1 tile on either x or y axis, go up or down by half tile then travel
-		//if tunnel is more than +1 difference, then travel along the lines (3 and larger)
-		// - for both cases, the final movement should be towards direction parallel to tunnel
-		// - tunnel either horizontal or vertical
-		// - first movement will be to within one full tile from center of tunnel
-		
+	public static void travel_Start_To_Tunnel() throws OdometerExceptions{
+
 		//take the tunnel coordinates and calculate the midpoint and whether tunnel is vertically or horizontally laid
 		findTunnelHeading();
 		double[] tunnelMidpoint = findTunnelMidpoint();
+		double myX = odometer.getXYT()[0];
+		double myY = odometer.getXYT()[1];
+
 		
 		//if vertically laid, move by x first to within one tile of middle of tunnel
 		if(isTunnelVertical) {
-			double myX = odometer.getXYT()[0];
-			double midpointToRobot = Math.abs(tunnelMidpoint[0] - myX);
-			//if midpoint x coordinates are smaller, turn left (270)
-			if(tunnelMidpoint[0] < myX) {
-				turnTo(270); //turn to 270
+			double midpointToRobot = Math.abs(tunnelMidpoint[0] - myX); //this is to check to see if its within 1 tile (case 1 or 2)
+			if(midpointToRobot < 35.0) {
+				//if midpoint x coordinates are smaller, turn to 270
+				if(tunnelMidpoint[0] < myX) {
+					turnTo(90); //turn to 90 the other way
+				} else {
+					turnTo(270);
+				}
+				//move forward by half a tile
+				moveStraight(SQUARE_SIZE/2, true, false);
+				myX = odometer.getXYT()[0];
+				myY = odometer.getXYT()[1];
+				if(tunnelMidpoint[1] > myY) {
+					turnTo(0); //turn to 0 
+					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
+				} else {
+					turnTo(180);
+					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
+				}
+				
+				moveStraight(SENSOR_OFFSET, true, false);
+				myX = odometer.getXYT()[0];
+				myY = odometer.getXYT()[1];
+				
+				//turn to either 270 or 90 depending on tunnel and myX
+				if(tunnelMidpoint[0] < myX) { //if midpoint x smaller than myX turn to 270
+					turnTo(270);
+				} else { //if midpoint x larger than myX turn to 90
+					turnTo(90);
+				}
+
+				//now do correction with other line
+				localizeLine();
+				moveStraight(SENSOR_OFFSET, true, false);
+				
 			} else {
-				turnTo(90);
+				myX = odometer.getXYT()[0];
+				myY = odometer.getXYT()[1];
+				//if midpoint x coordinates are smaller, turn to 270
+				//travel to the midpoint of the tunnel tile minue one tile and while moving make sure to correct and update odometer
+				//watch out cause this method also does a turn to
+				if(tunnelMidpoint[0] < myX) {
+					turnTo(270); //turn to 270
+					travelToWithCorrection(tunnelMidpoint[0]+SQUARE_SIZE, myY);
+				} else {
+					turnTo(90);
+					travelToWithCorrection(tunnelMidpoint[0]-SQUARE_SIZE, myY);
+				}
+				
+				//turn and move to the y of the tunnel tile + or minus 1
+				//so keep the same x but travel to the y
+				myX = odometer.getXYT()[0];
+				myY = odometer.getXYT()[1];
+				if(tunnelMidpoint[1] > myY) {
+					turnTo(0); //turn to 0 
+					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
+				} else {
+					turnTo(180);
+					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
+				}
+				
+				moveStraight(SENSOR_OFFSET, true, false);
+				myX = odometer.getXYT()[0];
+				myY = odometer.getXYT()[1];
+				
+				//turn to either 270 or 90 depending on tunnel and myX
+				if(tunnelMidpoint[0] < myX) { //if midpoint x smaller than myX turn to 270
+					turnTo(270);
+				} else { //if midpoint x larger than myX turn to 90
+					turnTo(90);
+				}
+
+				//now do correction with other line
+				localizeLine();
+				moveStraight(SENSOR_OFFSET, true, false);
 			}
-			//move and while moving make sure to correct and update odometer: if distance tunnel center to robot 3.5 you will cross 2 lines, 2.5 cross 1
-			//	move to coordinate of midpointToRobot - 1(tile) in direction you are coming from
-			//	once you cross line stop and ask if you have reached the coordinate, if not start travel again.
-		}
-		
-		
-		//then turn 90 degrees, if y coordinate of tunnell is smaller than robots and heading is west turn left, if value smaller and heading east turn right
-		//		if tunnel larger y and moving east, turn left, if tunnel larger y and moving west turn right
-		//then travel y axis to the tile before the tunnel
-		//stop, move forward by offset, and turn and localize again according to that position, update odometer values
-		
+		} 
 		//if horizontally laid out, move by y first
-		
-		
-		
-		
-		
+		else { 
+			double midpointToRobot = Math.abs(tunnelMidpoint[1] - myY); //this is to check to see if its within 1 tile (case 1 or 2)
+			if(midpointToRobot < 35.0) {
+				myX = odometer.getXYT()[0];
+				myY = odometer.getXYT()[1];
+				//if midpoint y coordinates are smaller, turn to 0
+				if(tunnelMidpoint[1] < myY) {
+					turnTo(0); //turn to 0
+				} else {
+					turnTo(180);
+				}
+
+				//move forward by half a tile
+				moveStraight(SQUARE_SIZE/2, true, false);
+				
+				myX = odometer.getXYT()[0];
+				myY = odometer.getXYT()[1];
+				if(tunnelMidpoint[0] < myX) {
+					turnTo(270); //turn to 270
+					travelToWithCorrection(tunnelMidpoint[0]+SQUARE_SIZE, myY);
+				} else {
+					turnTo(90);
+					travelToWithCorrection(tunnelMidpoint[0]-SQUARE_SIZE, myY);
+				}
+				
+				moveStraight(SENSOR_OFFSET, true, false);
+				myX = odometer.getXYT()[0];
+				myY = odometer.getXYT()[1];
+				
+				//turn to either 0 or 180 depending on tunnel and myY
+				if(tunnelMidpoint[1] < myY) { 
+					turnTo(180);
+				} else { 
+					turnTo(0);
+				}
+
+				//now do correction with other line
+				localizeLine();
+				moveStraight(SENSOR_OFFSET, true, false);
+				
+			} else {
+				
+				myX = odometer.getXYT()[0];
+				myY = odometer.getXYT()[1];
+				//if midpoint x coordinates are smaller, turn to 180
+				//travel to the midpoint of the tunnel tile minue one tile and while moving make sure to correct and update odometer
+				//watch out cause this method also does a turn to
+				if(tunnelMidpoint[1] < myY) {
+					turnTo(180); //turn to 180
+					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
+				} else {
+					turnTo(0);
+					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
+				}
+
+				//turn and move to the x of the tunnel tile + or minus 1
+				//so keep the same x but travel to the y
+				myX = odometer.getXYT()[0];
+				myY = odometer.getXYT()[1];
+				if(tunnelMidpoint[0] < myX) {
+					turnTo(270); //turn to 0 
+					travelToWithCorrection(tunnelMidpoint[0]+SQUARE_SIZE, myY);
+				} else {
+					turnTo(90);
+					travelToWithCorrection(tunnelMidpoint[0]-SQUARE_SIZE, myY);
+				}
+				
+				moveStraight(SENSOR_OFFSET, true, false);
+				myX = odometer.getXYT()[0];
+				myY = odometer.getXYT()[1];
+				
+				//turn to either 180 or 0 depending on tunnel and myY
+				if(tunnelMidpoint[1] < myY) { //if midpoint y smaller than myY turn to 180
+					turnTo(180);
+				} else { //if midpoint y larger than myY turn to 0
+					turnTo(0);
+				}
+
+				//now do correction with other line
+				localizeLine();
+				moveStraight(SENSOR_OFFSET, true, false);
+			}
+		}
 	}
 	
 	
@@ -134,17 +266,15 @@ public class Navigation {
 	 */ 
 	public static void travelToWithCorrection(double x, double y) throws OdometerExceptions {
 		// Define variables
-		double odometer[] = { 0, 0, 0 }, absAngle = 0, dist = 0, deltaX = 0, deltaY = 0;
+		double odo[] = { 0, 0, 0 }, absAngle = 0, dist = 0, deltaX = 0, deltaY = 0;
 		
 		// Get odometer readings
-		odometer = Odometer.getOdometer().getXYT();
+		odo = odometer.getXYT();
 		
-		x = x * SQUARE_SIZE;
-		y = y * SQUARE_SIZE;
 		
 		// Get displacement to travel on X and Y axis
-		deltaX = x - odometer[0];
-		deltaY = y - odometer[1];
+		deltaX = x - odo[0];
+		deltaY = y - odo[1];
 
 		// Displacement to point (hypothenuse)
 		dist = Math.hypot(Math.abs(deltaX), Math.abs(deltaY));
@@ -155,7 +285,7 @@ public class Navigation {
 		// Get absolute angle the robot must be facing
 		absAngle = Math.toDegrees(Math.atan2(deltaX, deltaY));
 
-		turnTo(absAngle);
+		turnTo(absAngle); 
 		
 		//if displacement is less than a tile then we will not cross line, so travel normally to coordinate
 		if(dist <= SQUARE_SIZE) {
@@ -163,8 +293,8 @@ public class Navigation {
 		} else {
 			double oldSampleRight = 0;
 			double oldSampleLeft = 0;
-			double newColorLeft;
-			double newColorRight;
+			float[] newColorLeft = new float[leftSampleProvider.sampleSize()];
+			float[] newColorRight = new float[rightSampleProvider.sampleSize()];
 
 
 			leftMotor.forward();
@@ -174,38 +304,135 @@ public class Navigation {
 			
 			while(true) {
 				// Get color sensor readings
-				newColorLeft = LightController.colorLeft;
-				newColorRight = LightController.colorRight;
+				leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
+				rightSampleProvider.fetchSample(newColorRight, 0); 
 
 				// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
-				if((newColorLeft) < 0.4 && oldSampleLeft > 0.4 && foundLeft == 0) {
+				if((newColorLeft[0]) < 0.4 && oldSampleLeft > 0.4 && foundLeft == 0) {
 					leftMotor.stop(true);
 					foundLeft++;
 				}
 				// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-				if((newColorRight) < 0.4 && oldSampleRight > 0.4 && foundRight == 0) {
+				if((newColorRight[0]) < 0.4 && oldSampleRight > 0.4 && foundRight == 0) {
 					rightMotor.stop(true);
 					foundRight++;
 				}
 				// Store last color samples
-				oldSampleLeft = newColorLeft;
-				oldSampleRight = newColorRight;
+				oldSampleLeft = newColorLeft[0];
+				oldSampleRight = newColorRight[0];
 
 				// If line found for both sensors, exit
 				if(foundLeft == 1 && foundRight == 1) {
 					break;
 				}
 			}
-			//perform correction of odometer here
+			//perform correction of odometer here when sensors are on top of lines
 			correctOdometer();
 			
-			
 		}	
+		
+		//if it has not arrived yet to destination, recursively call
+		if(!hasArrived(x, y)) {
+			travelToWithCorrection(x, y);
+		}
+	}
+	
+	
+	private static void localizeLine() throws OdometerExceptions {
+		
+		int foundLeft = 0;
+		int foundRight = 0;
+
+		double oldSampleRight = 0;
+		double oldSampleLeft = 0;
+		float[] newColorLeft = new float[leftSampleProvider.sampleSize()];
+		float[] newColorRight = new float[rightSampleProvider.sampleSize()];
+
+		Navigation.leftMotor.forward();
+		Navigation.rightMotor.forward();
+		
+
+
+		while(true) {
+			// Get color sensor readings
+			leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
+			rightSampleProvider.fetchSample(newColorRight, 0); 
+
+			// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
+			if((newColorLeft[0]) < 0.4 && oldSampleLeft > 0.4 && foundLeft == 0) {
+				leftMotor.stop(true);
+				foundLeft++;
+			}
+			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
+			if((newColorRight[0]) < 0.4 && oldSampleRight > 0.4 && foundRight == 0) {
+				rightMotor.stop(true);
+				foundRight++;
+			}
+			// Store last color samples
+			oldSampleLeft = newColorLeft[0];
+			oldSampleRight = newColorRight[0];
+
+			// If line found for both sensors, exit
+			if(foundLeft == 1 && foundRight == 1) {
+				break;
+			}
+		}
+		
+		correctOdometer();
+	}
+	
+    /**
+     * This checks if the robot is within a certain distance from a destination
+     */
+	private static boolean hasArrived(double xd, double yd) throws OdometerExceptions {
+		double odometer[] = { 0, 0, 0 };
+		odometer = Odometer.getOdometer().getXYT();
+		double xf = odometer[0];
+		double yf = odometer[1];
+		double cErr = Math.hypot(xf - xd, yf - yd);
+		return cErr < 4;
 	}
 	
 	//if moving along x axis only allowed to correct x, if along y axis then correct y
-	public static void correctOdometer() {
-		
+	public static void correctOdometer() throws OdometerExceptions {
+		Odometer odo = Odometer.getOdometer();
+		int theta = (int)(odo.getXYT()[2]);
+		double y, x;
+		if(theta < 20 && theta >= 0 || theta > 340 && theta <=360) { //heading north correct y
+			//robot just stopped at line, get y value and add the offset, then round to nearest coordinate
+			y = odo.getXYT()[1];
+			y += SENSOR_OFFSET;
+			y = y/SQUARE_SIZE;
+			int yLine = (int) Math.round(y);
+			y = (yLine * SQUARE_SIZE) - SENSOR_OFFSET;
+			odo.setY(y);
+			odo.setTheta(0.0);
+		} else if (theta > 70 && theta < 110) {	//heading east correct x
+			// get x value and add offset
+			x = odo.getXYT()[0];
+			x += SENSOR_OFFSET;
+			x = x/SQUARE_SIZE;
+			int xLine = (int) Math.round(x);
+			x = (xLine * SQUARE_SIZE) - SENSOR_OFFSET;
+			odo.setX(x);
+			odo.setTheta(90.0);
+		} else if (theta > 160 && theta < 200) { //heading south correct y
+			y = odo.getXYT()[1];
+			y -= SENSOR_OFFSET;
+			y = y/SQUARE_SIZE;
+			int yLine = (int) Math.round(y);
+			y = (yLine * SQUARE_SIZE) + SENSOR_OFFSET;
+			odo.setY(y);
+			odo.setTheta(180.0);
+		} else if (theta > 250 && theta < 290) { //heading is west correct x
+			x = odo.getXYT()[0];
+			x -= SENSOR_OFFSET;
+			x = x/SQUARE_SIZE;
+			int xLine = (int) Math.round(x);
+			x = (xLine * SQUARE_SIZE) + SENSOR_OFFSET;
+			odo.setX(x);
+			odo.setTheta(270.0);
+		}
 	}
 	
 	
@@ -258,23 +485,25 @@ public class Navigation {
 		rightMotor.rotate(convertDistance(vectorDistance), true);
 	}
 
-	/**
+	
+    /**
 	 * This method causes the robot to turn (on point) to the absolute heading
 	 * theta. This method should turn a MINIMAL angle to its target.
-	 * 
-	 * @param theta:theta angle
-	 */
+     * @param theta : theta angle
+     */
 	public static void turnTo(double theta) {
-		if (theta >= 180) {
-			theta = -(360 - theta);
-		} else if (theta < -180) {
-			theta = (360 + theta);
-		}
-		leftMotor.setSpeed(ROTATE_SPEED);
-		rightMotor.setSpeed(ROTATE_SPEED);
-		leftMotor.rotate(convertAngle(theta), true);
-		rightMotor.rotate(-convertAngle(theta), false);
+		double dTheta = theta - odometer.getXYT()[2];
+		if(dTheta < 0) dTheta += 360;
+		setSpeedAcceleration(ROTATE_SPEED, ROTATE_ACC);
 
+		if (dTheta > 180) { // turn left
+			leftMotor.rotate(-convertAngle(360 - dTheta), true);
+			rightMotor.rotate(convertAngle(360 - dTheta), false);
+		}
+		else { // turn right
+			leftMotor.rotate(convertAngle( dTheta), true);
+			rightMotor.rotate(-convertAngle( dTheta), false);
+		}
 	}
 	
 

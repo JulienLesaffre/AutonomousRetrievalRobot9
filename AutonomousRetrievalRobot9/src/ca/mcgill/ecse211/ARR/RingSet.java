@@ -14,7 +14,7 @@ import ca.mcgill.ecse211.odometer.*;
  * This class handles the travel to the ring set and the ring pick up.
  *
  */
-public class RingSet extends Thread{
+public class RingSet {
 
 	private static Odometer odometer;
 
@@ -37,8 +37,7 @@ public class RingSet extends Thread{
 	 * @return: return the coordinates of the center of the closest Tile adjacent to
 	 *          the ring set from the robot
 	 */
-	private double[] findClosestTileCenter(double x, double y) {
-		// TODO
+	private static double[] findClosestTileCenter(double x, double y) {
 		double[] xy = { x, y };
 		return xy;
 	}
@@ -53,7 +52,7 @@ public class RingSet extends Thread{
 	/**
 	 * Detect the rings and their color
 	 */
-	private void detectRings() {
+	private static void detectRings() {
 
 	}
 
@@ -61,11 +60,11 @@ public class RingSet extends Thread{
 	 * The robot moves to the center of the next tile adjacent to the ring set in
 	 * order to be ready to detect a ring on a new side of the ring set
 	 */
-	private void changeSide() {
+	private static void changeSide() {
 
 	}
 
-	public void run() {
+	public static void ringSetMain() {
 		// out of the tunnel, it should be nice if the robot could localize again.
 		double x = odometer.getXYT()[0];
 		double y = odometer.getXYT()[1];
@@ -78,5 +77,11 @@ public class RingSet extends Thread{
 		}
 		// navigate to enter of tunnel
 	}
+	
+
+	public static void testRingSet() {
+		
+	}
+	
 
 }

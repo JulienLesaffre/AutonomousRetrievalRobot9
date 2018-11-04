@@ -9,16 +9,8 @@ public class Testing extends Thread{
 	}
 	
 	public void run() {
-
-		RingSet ringSetTesting;
-		try {
-			ringSetTesting = new RingSet();
-			Thread ringSetTestingThread = new Thread(ringSetTesting);
-			ringSetTestingThread.start();
-		} catch (OdometerExceptions e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		RingSet.testRingSet();
+			
 
 		
 	}

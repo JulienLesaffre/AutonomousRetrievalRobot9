@@ -34,6 +34,7 @@ public class AutonomousRetrievalRobot {
 	static LightController lightController;
 	static LightPoller lightPoller;
 	static LightLocalizer lightLocalizer;
+	static Testing test;
 
 
 	/**
@@ -99,7 +100,12 @@ public class AutonomousRetrievalRobot {
 		
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws OdometerExceptions {
+		initialize(); 
+		Thread testThread = new Thread(test);
+		testThread.start();
+		
+
 		
 
 	}

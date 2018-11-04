@@ -306,7 +306,7 @@ public class Navigation {
 		rightMotor.rotate(i * -convertAngle(degrees), continueRunning);
 	}
 	
-	public void stopMotors() {
+	public static void stopMotors() {
 		leftMotor.stop(true);
 		rightMotor.stop(true);
 	}

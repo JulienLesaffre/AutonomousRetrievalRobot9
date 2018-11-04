@@ -8,6 +8,7 @@ import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorModes;
 import lejos.robotics.SampleProvider;
 import ca.mcgill.ecse211.odometer.*;
+import ca.mcgill.ecse211.sensors.USController;
 
 /**
  * 
@@ -22,6 +23,7 @@ public class RingSet {
 	public static final EV3LargeRegulatedMotor rightMotor = Navigation.rightMotor;
 	public static final EV3MediumRegulatedMotor ringPickUpMotor = new EV3MediumRegulatedMotor(
 			LocalEV3.get().getPort("C"));
+	private static int distance = USController.distance;
 
 	public RingSet() throws OdometerExceptions {
 		RingSet.odometer = Odometer.getOdometer();
@@ -45,8 +47,12 @@ public class RingSet {
 	/**
 	 * Handles the picking up of a ring
 	 */
-	public void pickUpRing() {
-		ringPickUpMotor.rotate(180);
+	public static void pickUpRing() {
+		while (distance > 20) { // distance to change after testing
+			Navigation.moveStraight(20, true, true);
+		}
+		Navigation.stopMotors();
+		ringPickUpMotor.rotate(180); //angle to change after testing
 	}
 
 	/**
@@ -80,6 +86,7 @@ public class RingSet {
 	
 
 	public static void testRingSet() {
+		pickUpRing();
 		
 	}
 	

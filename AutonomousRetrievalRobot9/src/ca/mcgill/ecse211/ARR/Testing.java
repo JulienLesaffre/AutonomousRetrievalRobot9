@@ -10,9 +10,7 @@ public class Testing extends Thread{
 	
 	public void run() {
 		RingSet.testRingSet();
-			
-
-		
+				
 	}
 
 }

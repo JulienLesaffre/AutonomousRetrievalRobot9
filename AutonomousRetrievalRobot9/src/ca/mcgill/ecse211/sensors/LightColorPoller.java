@@ -7,16 +7,16 @@ import lejos.robotics.SampleProvider;
  */
 public class LightColorPoller extends Thread {
 
-	private SampleProvider lr;
-	private DataController dataCont;
+	private SampleProvider sampleProv;
+	private ColorController cont;
 	private float[] ringData;
 
 	private static int SLEEP_TIME = 50;
 
-	public LightColorPoller(SampleProvider lr, float[] ringData, DataController dataCont) {
-		this.lr = lr;
-		this.dataCont = dataCont;
-		this.ringData = ringData;
+	public LightColorPoller(SampleProvider sp, float[] ringData, ColorController cont) {
+		this.sampleProv = sp;
+		ringData = new float[sp.sampleSize()];
+		this.cont = cont;
 	}
 
 
@@ -27,11 +27,11 @@ public class LightColorPoller extends Thread {
 	 * @see java.lang.Thread#run()
 	 */
 	public void run() {
-		float[] light;
+		float[] data;
 		while (true) {
-			lr.fetchSample(ringData, 0); // acquire data
-			light = (ringData); // extract from buffer, cast to int
-			dataCont.setRGB(light); // now take action depending on value
+			sampleProv.fetchSample(ringData, 0); // acquire data
+			data = (ringData); // extract from buffer, cast to int
+			cont.processRingData(data); // now take action depending on value
 			try {
 				Thread.sleep(SLEEP_TIME);
 			} catch (Exception e) {

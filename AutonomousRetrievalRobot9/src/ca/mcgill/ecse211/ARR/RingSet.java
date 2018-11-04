@@ -14,7 +14,7 @@ import ca.mcgill.ecse211.odometer.*;
  * This class handles the travel to the ring set and the ring pick up.
  *
  */
-public class RingSet extends Thread {
+public class RingSet extends Thread{
 
 	private static Odometer odometer;
 

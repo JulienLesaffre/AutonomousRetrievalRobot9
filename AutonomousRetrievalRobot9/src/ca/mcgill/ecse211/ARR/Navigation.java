@@ -115,7 +115,6 @@ public class Navigation {
 				//move forward by half a tile
 				moveStraight(SQUARE_SIZE/2, true, false);
 				
-				
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
 				
@@ -130,7 +129,7 @@ public class Navigation {
 				}
 				
 				//move forward by sensor to center offset
-				moveStraight(SENSOR_OFFSET, true, false);
+//				moveStraight(SENSOR_OFFSET, true, false);
 				
 				
 				myX = odometer.getXYT()[0];
@@ -172,7 +171,7 @@ public class Navigation {
 				}
 				
 				//move by sensor to center offset
-				moveStraight(SENSOR_OFFSET, true, false);
+//				moveStraight(SENSOR_OFFSET, true, false);
 				
 				
 				myX = odometer.getXYT()[0];
@@ -214,7 +213,7 @@ public class Navigation {
 				}
 				
 				//move by sensor to center offset
-				moveStraight(SENSOR_OFFSET, true, false);
+//				moveStraight(SENSOR_OFFSET, true, false);
 				
 				
 				myX = odometer.getXYT()[0];
@@ -256,7 +255,7 @@ public class Navigation {
 				}
 				
 				//move by sensor to center offset
-				moveStraight(SENSOR_OFFSET, true, false);
+//				moveStraight(SENSOR_OFFSET, true, false);
 				
 				
 				myX = odometer.getXYT()[0];
@@ -282,23 +281,6 @@ public class Navigation {
 		setSpeedAcceleration(TUNNEL_SPPED, TUNNEL_ACCEL);
 		moveStraight(SQUARE_SIZE * 3.6, true, false);
 	}
-	
-	
-	/**
-	 * This method is passed in either x values or y values (only) of both the tunnel and robot values;
-	 * must pass in either both x values or both y values. Checks to see if the absolute distance is within 
-	 * one tile.
-	 * @param tunnelValue : x or y value of tunnel midpoint
-	 * @param robotValue : x or y value of robot current position
-	 * @return : true if within one tile
-	 */
-	public static boolean isTunnelWithinOneTile(double tunnelValue, double robotValue) {
-		if (Math.abs(tunnelValue - robotValue) < SQUARE_SIZE + 4) // 4 added incase odometry error
-			return true;
-		else 
-			return false;
-	}
-	
 	
 	
 	/**
@@ -382,6 +364,7 @@ public class Navigation {
 				//perform correction of odometer here when sensors are on top of lines
 				correctOdometer();
 				
+				
 				//display the corrected values 
 				odo = odometer.getXYT();
 				Display.displayNavigation(odo[0], odo[1], odo[2]);
@@ -435,7 +418,7 @@ public class Navigation {
 	}
 	
     /**
-     * This checks if the robot is within a certain distance from a destination
+     * Checks if the robot is within a certain distance from a destination
      */
 	private static boolean hasArrived(double xd, double yd) throws OdometerExceptions {
 		double odometer[] = { 0, 0, 0 };
@@ -443,7 +426,7 @@ public class Navigation {
 		double xf = odometer[0];
 		double yf = odometer[1];
 		double cErr = Math.hypot(xf - xd, yf - yd);
-		return cErr < 6;
+		return cErr < 4;
 	}
 	
 	//if moving along x axis only allowed to correct x, if along y axis then correct y
@@ -499,7 +482,20 @@ public class Navigation {
 		else isTunnelVertical = true;
 	}
 	
-	
+	/**
+	 * This method is passed in either x values or y values (only) of both the tunnel and robot values;
+	 * must pass in either both x values or both y values. Checks to see if the absolute distance is within 
+	 * one tile.
+	 * @param tunnelValue : x or y value of tunnel midpoint
+	 * @param robotValue : x or y value of robot current position
+	 * @return : true if within one tile
+	 */
+	public static boolean isTunnelWithinOneTile(double tunnelValue, double robotValue) {
+		if (Math.abs(tunnelValue - robotValue) < SQUARE_SIZE + 4) // 4 added incase odometry error
+			return true;
+		else 
+			return false;
+	}
 	
 	
 	/**

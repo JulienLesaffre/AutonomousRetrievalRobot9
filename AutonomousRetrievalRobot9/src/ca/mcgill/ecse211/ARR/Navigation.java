@@ -417,9 +417,14 @@ public class Navigation {
 		correctOdometer();
 	}
 	
-    /**
-     * Checks if the robot is within a certain distance from a destination
-     */
+	
+	/**
+	 * Checks if the robot is within a certain distance from a destination.
+	 * @param xd : x coordinate desitination
+	 * @param yd : y coordinate destination
+	 * @return : true if its within the distance
+	 * @throws OdometerExceptions
+	 */
 	private static boolean hasArrived(double xd, double yd) throws OdometerExceptions {
 		double odometer[] = { 0, 0, 0 };
 		odometer = Odometer.getOdometer().getXYT();
@@ -429,57 +434,60 @@ public class Navigation {
 		return cErr < 4;
 	}
 	
-	//if moving along x axis only allowed to correct x, if along y axis then correct y
+	
+	/**
+	 * This method is used when the robot is traveling either horizontally or vertically
+	 * and its light sensors have stopped on top of the lines. It retrieved the direction 
+	 * and location of robot and corrects odometer values. If traveling x then only corrects x,
+	 * always corrects theta. Estimates heading and position based on odometer readings so assumes
+	 * readings are not off by a certain amount.
+	 * @throws OdometerExceptions
+	 */
 	public static void correctOdometer() throws OdometerExceptions {
-		Odometer odo = Odometer.getOdometer();
-		int theta = (int)(odo.getXYT()[2]);
-		double y, x;
-		if(theta < 20 && theta >= 0 || theta > 340 && theta <=360) { //heading north correct y
-			//robot just stopped at line, get y value and add the offset, then round to nearest coordinate
-			y = odo.getXYT()[1];
+		double[] data = new double[3];
+		data = odometer.getXYT();
+		int theta = (int)data[2];
+		double x = data[0], y = data[1];
+		//robot stopped with sensors on line, get x/y and adjust for offset, then round to nearest coordinate
+		if(theta < 20 && theta >= 0 || theta > 340 && theta <= 360) { 	//heading north correct y
 			y += SENSOR_OFFSET;
 			y = y/SQUARE_SIZE;
 			int yLine = (int) Math.round(y);
 			y = (yLine * SQUARE_SIZE) - SENSOR_OFFSET;
-			odo.setY(y);
-			odo.setTheta(0.0);
-		} else if (theta > 70 && theta < 110) {	//heading east correct x
-			// get x value and add offset
-			x = odo.getXYT()[0];
+			odometer.setY(y);
+			odometer.setTheta(0.0);
+		} else if (theta > 70 && theta < 110) {							//heading east correct x
 			x += SENSOR_OFFSET;
 			x = x/SQUARE_SIZE;
 			int xLine = (int) Math.round(x);
 			x = (xLine * SQUARE_SIZE) - SENSOR_OFFSET;
-			odo.setX(x);
-			odo.setTheta(90.0);
-		} else if (theta > 160 && theta < 200) { //heading south correct y
-			y = odo.getXYT()[1];
+			odometer.setX(x);
+			odometer.setTheta(90.0);
+		} else if (theta > 160 && theta < 200) { 						//heading south correct y
 			y -= SENSOR_OFFSET;
 			y = y/SQUARE_SIZE;
 			int yLine = (int) Math.round(y);
 			y = (yLine * SQUARE_SIZE) + SENSOR_OFFSET;
-			odo.setY(y);
-			odo.setTheta(180.0);
-		} else if (theta > 250 && theta < 290) { //heading is west correct x
-			x = odo.getXYT()[0];
+			odometer.setY(y);
+			odometer.setTheta(180.0);
+		} else if (theta > 250 && theta < 290) { 						//heading is west correct x
 			x -= SENSOR_OFFSET;
 			x = x/SQUARE_SIZE;
 			int xLine = (int) Math.round(x);
 			x = (xLine * SQUARE_SIZE) + SENSOR_OFFSET;
-			odo.setX(x);
-			odo.setTheta(270.0);
+			odometer.setX(x);
+			odometer.setTheta(270.0);
 		}
 	}
 	
 	
 	/**
-	 * This method finds out if the tunnel is vertical or horizontal and sets the static variable.
-	 * Used by travel_Start_To_Tunnel method to calculate ideal trajectory.
+	 * This method finds out if the tunnel is vertical or horizontal by observing
+	 * the absolute difference between the tunnels lower left and upper right x values 
+	 * and sets the class variable isTunnelVertical accordingly.
 	 */
 	public static void findTunnelHeading() {
-		int differenceInXCoord = Math.abs(BRR_LL[0] - BRR_UR[0]);
-		if(differenceInXCoord == 2) isTunnelVertical = false;
-		else isTunnelVertical = true;
+		isTunnelVertical = (Math.abs(BRR_LL[0] - BRR_UR[0]) == 2) ? false : true;
 	}
 	
 	/**
@@ -499,22 +507,54 @@ public class Navigation {
 	
 	
 	/**
-	 * This method finds and returns the midpoint of the start of the tunnel relative 
-	 * to the starting zone and team our robot is on. It assumes the find tunnel heading
-	 * is already called and heading is calculated.
-	 * 
-	 * @return midpoint: double[] coordinates in actual distance measurement
+	 * This method finds and returns the midpoint of the start or end of the robot's team's tunnel.
+	 * Assumes the tunnel coordinates given i.e. BRR_LL and BRR_UR for red team, are not in actual 
+	 * distance values but coordinate values.
+	 * @param start : boolean check, if true then method returns exit midpoint of tunnel relative to robot start and team
+	 * @return midpoint: double[] coordinates of tunnel midpoint in actual distance measurement
 	 */
-	public static double[] findTunnelMidpoint() {
-		double[] midpoint = {0,0};
-		if(isTunnelVertical) {
-			midpoint[1] = (BRR_LL[1]) * SQUARE_SIZE;
-			midpoint[0] = (BRR_LL[0] + 0.5) * SQUARE_SIZE;
+	@SuppressWarnings("unused")
+	public static double[] findTunnelMidpoint(boolean start) {
+		findTunnelHeading(); //incase not called
+		
+		//check if we are red team, then use tunnel coordinates of red team
+		int[] tunnelLL = {0, 0}, tunnelUR = {0, 0};
+		if(RedTeam == 9) { 	//if we are red team set the arrays to BRR_LL and BRR_UR 
+			tunnelLL = BRR_LL;
+			tunnelUR = BRR_UR;
 		} else {
-			midpoint[0] = (BRR_LL[0]) * SQUARE_SIZE;
-			midpoint[1] = (BRR_LL[1] + 0.5) * SQUARE_SIZE;
+			tunnelLL = BRG_LL;
+			tunnelUR = BRG_UR;
 		}
-		return midpoint;
+
+		double[] midpoint1 = {0,0}, midpoint2 = {0,0};
+		
+		//calculate midpoints of both ends of tunnel
+		if(isTunnelVertical) {
+			midpoint1[1] = (tunnelLL[1]) * SQUARE_SIZE;
+			midpoint1[0] = (tunnelLL[0] + 0.5) * SQUARE_SIZE;
+			midpoint2[1] = (tunnelUR[1]) * SQUARE_SIZE;
+			midpoint2[0] = (tunnelUR[0] - 0.5) * SQUARE_SIZE;
+		} else {
+			midpoint1[0] = (tunnelLL[0]) * SQUARE_SIZE;
+			midpoint1[1] = (tunnelLL[1] + 0.5) * SQUARE_SIZE;
+			midpoint2[0] = (tunnelUR[0]) * SQUARE_SIZE;
+			midpoint2[1] = (tunnelUR[1] - 0.5) * SQUARE_SIZE;
+		}
+		
+		//whichever is closer is the midpoint we want
+		double myX = odometer.getXYT()[0], myY = odometer.getXYT()[1];
+		double dX1 = midpoint1[0] - myX; 
+		double dY1 = midpoint1[1] - myY; 
+		double dX2 = midpoint2[0] - myX; 
+		double dY2 = midpoint2[1] - myY; 
+
+		// displacement to points
+		double dist1 = Math.hypot(Math.abs(dX1), Math.abs(dY1));
+		double dist2 = Math.hypot(Math.abs(dX2), Math.abs(dY2));
+		
+		//return the one with smaller distance to
+		return (dist1 > dist2) ? midpoint2 : midpoint1;
 	}
 	
 	

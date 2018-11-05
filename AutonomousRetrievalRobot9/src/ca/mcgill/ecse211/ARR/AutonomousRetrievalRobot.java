@@ -18,8 +18,10 @@ import lejos.robotics.SampleProvider;
 /////////////// TODO ///////////////
  * check if turnto method works properly, it might do 360 turns because the odometer is already off and it thinks its heading another direction
  * add median filter for the light sensors
- * able to receive values from wifi
+ * able to receive values from wifi **
  * running slowly, increase speed, if cant its because too much power on cpu
+ * turn off sensors when not needed i.e. ultrasonic (i.e. do we nullify the SampleProvider or what?
+ * watch out traveltowithcorrection also does a turn to
 ////////////////////////////////////
 */
 
@@ -27,6 +29,12 @@ import lejos.robotics.SampleProvider;
 /**
  * @author JulienLesaffre
  * @author FouadBitar
+ * 
+ * This is the main execution class for the robot.
+ * 
+ * There are no polling classes that create threads so as to minimize the CPU load. The SampleProviders
+ * are initialized in the main and are sent to the classes that want to use it. This is so that we use same
+ * initialization.
  *
  */
 public class AutonomousRetrievalRobot {
@@ -84,7 +92,7 @@ public class AutonomousRetrievalRobot {
 		
 		lightLocalizer.localize(Navigation.RedCorner); 	//light localize
 		
-		Navigation.travel_Start_To_Tunnel();
+		Navigation.travelStartToTunnel();
 		
 		Navigation.setSpeedAcceleration(200, 1500);
 		Navigation.moveStraight(Navigation.SQUARE_SIZE/2, true, false);

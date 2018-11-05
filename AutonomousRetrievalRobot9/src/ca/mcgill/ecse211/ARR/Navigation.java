@@ -3,30 +3,30 @@ package ca.mcgill.ecse211.ARR;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.robotics.SampleProvider;
+
+import java.util.ArrayList;
+
 import ca.mcgill.ecse211.odometer.*;
 
 
 /**
- * This class handles the movement of the robot
- * it initializes the motors and all motor access should be through this class.
- * Methods are defined as static and any other class can refer statically
- * to control the movement of robot.
- *
+ * This class handles all movement of the robot, where motor initialization is private.
+ * Other classes statically call the methods to move. 
  */
 public class Navigation {
 
 	// Game parameters (will be provided with Wifi Class)
 	// - TR: team red, TG: team green, BR: bridge
-	public static final int RedTeam = 0; 		//this theyll probs give i.e. redTeam = 9 for our group number
+	public static final int RedTeam = 0; 		//this theyll probs give i.e. redTeam = 9 for our group number and we check which values we are
 	public static final int GreenTeam = 0; 
-	public static final int RedCorner = 0; 	//i think this is a number from 0-3
+	public static final int RedCorner = 0; 		//i think this is a number from 0-3
 	public static final int GreenCorner = -1;
 	public static final int[] Red_LL = {0,0}; 
 	public static final int[] Red_UR = {0,0}; 
 	public static final int[] Green_LL = {0,0}; 
 	public static final int[] Green_UR = {0,0}; 
-	public static final int[] BRR_LL = {3,3}; 
-	public static final int[] BRR_UR = {4,5};
+	public static final int[] BRR_LL = {1,3}; 
+	public static final int[] BRR_UR = {2,5};
 	public static final int[] BRG_LL = {0,0}; 
 	public static final int[] BRG_UR = {0,0}; 
 	public static final int[] TR_LL = {0,0}; 
@@ -34,31 +34,43 @@ public class Navigation {
 	public static final int[] TG_LL = {0,0}; 
 	public static final int[] TG_UR = {0,0}; 
 	
-	
+	//Speed and acceleration
 	private static final int ROTATE_SPEED = 150;
-	private static final int ROTATE_ACC = 1500;
+	private static final int ROTATE_ACCEL = 1500;
 	private static final int NAV_WITH_CORR_SPEED = 190;
 	private static final int NAV_WITH_CORR_ACCEL = 1500;
+	private static final int TUNNEL_SPPED = 130;
+	private static final int TUNNEL_ACCEL = 1000;
+	
+	//Robot measurements
 	public static final double WHEEL_RAD = 2.2;
 	public static final double TRACK = 12.85;
 	public static final double SQUARE_SIZE = 30.48;
 	public static final double SENSOR_OFFSET = 4.9;
 
+	//Association variables
 	private static Odometer odometer;
 	private static boolean isNavigating;
-	private static boolean isTunnelVertical;
 
+	//EV3 sensor 
 	public static final EV3LargeRegulatedMotor leftMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
 	public static final EV3LargeRegulatedMotor rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
-	private static final int NAV_WITH_CORR_ACC = 0;
-	
-	
 	private static SampleProvider leftSampleProvider;
 	private static SampleProvider rightSampleProvider;
+	
+	//Class variables
+	private static boolean isTunnelVertical;
 
 	
+	/**
+	 * Class constructor
+	 * @param leftLight : takes in SampleProvider for left light sensor
+	 * @param rightLight : takes in SampleProvider for right light sensor
+	 * @param odo : takes in odometer, instead of calling Odometer to get, this ensures odometer instantiated first
+	 * @throws OdometerExceptions
+	 */
 	public Navigation(SampleProvider leftLight, SampleProvider rightLight, Odometer odo) throws OdometerExceptions {
-		Navigation.odometer = odo;
+		odometer = odo;
 		leftSampleProvider = leftLight;
 		rightSampleProvider = rightLight;
 	}
@@ -66,69 +78,78 @@ public class Navigation {
 	
 	
 	/**
-	 * This method asssumes the robot has finished localizing, it takes its coordinates
-	 * and calculates the trajectory to the tunnel. The trajectory is based on horizontal
-	 * and vertical movements only. The robot travels x and y to reach the tile before
-	 * the start of the tunnel where it is able to localize all odometer data accurately.
-	 * This way the robot will be accurately within one tile of the tunnel in order to travel
-	 * through without problems.
+	 * Method asssumes robot done localizing, takes coordinates and calculates the trajectory 
+	 * to the tunnel based on four cases. If the tunnel is placed vertically, it travels first horizontally
+	 * (along the x axis) then vertically (along y axis) so that it may re-localize just before entering
+	 * the tunnel, the robot will be accurately within one tile of the tunnel to travel without a hitch. It
+	 * takes the robot to and through the tunnel.
 	 * 
-	 * Once x and y travel is calculated, it repeatedly calls on travelToWithCorrection to 
-	 * move while constantly correcting using the sensors.
+	 * Cases:
+	 * 1) tunnel has vertical orientation and its midpoint x value is within 1 tile of robot x value
+	 * 2) tunnel has vertical orientation and its midpoint x value is greater than 1 tile of robot x value
+	 * 3) tunnel has horizontal orientation and its midpoint y value is within 1 tile of robot y value
+	 * 4) tunnel has horizontal orientation and its midpoint y value is greater than 1 tile of robot y value
+	 * 
+	 * In order to achieve localization before entering tunnel for cases 1 and 3, we must move away from the 
+	 * tunnel midpoint so as to be able to turn to it and catch the second line.
 	 */
-	public static void travel_Start_To_Tunnel() throws OdometerExceptions{
+	public static void travelStartToTunnel() throws OdometerExceptions {
 
-		//take the tunnel coordinates and calculate the midpoint and whether tunnel is vertically or horizontally laid
+		//calculate midpoint and tunnel orientation
 		findTunnelHeading();
 		double[] tunnelMidpoint = findTunnelMidpoint();
-		System.out.println("" + isTunnelVertical);
+		
 		double myX = odometer.getXYT()[0];
 		double myY = odometer.getXYT()[1];
 
-		
-		//if vertically laid, move by x first to within one tile of middle of tunnel
+		//if tunnel vertical, move by x first to within one tile of tunnelMidpoint x value
 		if(isTunnelVertical) {
-			double midpointToRobot = Math.abs(tunnelMidpoint[0] - myX); //this is to check to see if its within 1 tile (case 1 or 2)
-			if(midpointToRobot < 35.0) {
-				//if midpoint x coordinates are smaller, turn to 270
-				if(tunnelMidpoint[0] < myX) {
-					turnTo(90); //turn to 90 the other way
-				} else {
-					turnTo(270);
-				}
+			
+			//CASE 1
+			if(isTunnelWithinOneTile(tunnelMidpoint[0], myX)) {
+				
+				//turn away from tunnel midpoint
+				if(tunnelMidpoint[0] < myX)	turnTo(90); 
+				else turnTo(270);
+				
 				//move forward by half a tile
 				moveStraight(SQUARE_SIZE/2, true, false);
+				
+				
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
+				
+				//now travel along y axis to the y coordinate *one before* the tunnel midpoint
+				//travel north if tunnel y value is above on grid, else south
 				if(tunnelMidpoint[1] > myY) {
-					turnTo(0); //turn to 0 
+					turnTo(0); 
 					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
 				} else {
 					turnTo(180);
 					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
 				}
 				
+				//move forward by sensor to center offset
 				moveStraight(SENSOR_OFFSET, true, false);
+				
+				
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
 				
-				//turn to either 270 or 90 depending on tunnel and myX
-				if(tunnelMidpoint[0] < myX) { //if midpoint x smaller than myX turn to 270
-					turnTo(270);
-				} else { //if midpoint x larger than myX turn to 90
-					turnTo(90);
-				}
+				//turn to travel remaining x distance to center of tunnel
+				if(tunnelMidpoint[0] < myX) turnTo(270);
+				else turnTo(90);
 
-				//now do correction with other line
+				//now correct correct with second line essentially localizing
 				localizeLine();
 				moveStraight(SENSOR_OFFSET, true, false);
 				
-			} else {
-				myX = odometer.getXYT()[0];
-				myY = odometer.getXYT()[1];
-				//if midpoint x coordinates are smaller, turn to 270
-				//travel to the midpoint of the tunnel tile minue one tile and while moving make sure to correct and update odometer
-				//watch out cause this method also does a turn to
+			}
+			
+			//CASE 2
+			else {
+				
+				//turn towards x value of tunnel midpoint and travel to the point before it in one tile
 				if(tunnelMidpoint[0] < myX) {
 					turnTo(270); //turn to 270
 					travelToWithCorrection(tunnelMidpoint[0]+SQUARE_SIZE, myY);
@@ -137,10 +158,11 @@ public class Navigation {
 					travelToWithCorrection(tunnelMidpoint[0]-SQUARE_SIZE, myY);
 				}
 				
-				//turn and move to the y of the tunnel tile + or minus 1
-				//so keep the same x but travel to the y
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
+				
+				//now travel along y axis to the y coordinate *one before* the tunnel midpoint
+				//travel north if tunnel y value is above on grid, else south
 				if(tunnelMidpoint[1] > myY) {
 					turnTo(0); //turn to 0 
 					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
@@ -149,107 +171,134 @@ public class Navigation {
 					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
 				}
 				
+				//move by sensor to center offset
 				moveStraight(SENSOR_OFFSET, true, false);
+				
+				
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
 				
-				//turn to either 270 or 90 depending on tunnel and myX
-				if(tunnelMidpoint[0] < myX) { //if midpoint x smaller than myX turn to 270
-					turnTo(270);
-				} else { //if midpoint x larger than myX turn to 90
-					turnTo(90);
-				}
+				//turn towards tunnel x value
+				if(tunnelMidpoint[0] < myX) turnTo(270);
+				else turnTo(90);
 
-				//now do correction with other line
+				//now do correction essentially localizing
 				localizeLine();
 				moveStraight(SENSOR_OFFSET, true, false);
 			}
 		} 
-		//if horizontally laid out, move by y first
+		//if tunnel horizontal, move by y first to within one tile of tunnelMidpoint y value
 		else { 
-			double midpointToRobot = Math.abs(tunnelMidpoint[1] - myY); //this is to check to see if its within 1 tile (case 1 or 2)
-			if(midpointToRobot < 30.0) {
-				myX = odometer.getXYT()[0];
-				myY = odometer.getXYT()[1];
-				//if midpoint y coordinates are smaller, turn to 0
-				if(tunnelMidpoint[1] < myY) {
-					turnTo(0); //turn to 0
-				} else {
-					turnTo(180);
-				}
+			
+			//CASE 3
+			if(isTunnelWithinOneTile(tunnelMidpoint[1], myY)) {
+				
+				//turn away from tunnel midpoint y value
+				if(tunnelMidpoint[1] < myY) turnTo(0); 
+				else turnTo(180);
 
-				//move forward by half a tile
+				//move forward by half a tile in y direction
 				moveStraight(SQUARE_SIZE/2, true, false);
+				
 				
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
+				
+				//then move in x direction to x value *just before* tunnel midpoint
 				if(tunnelMidpoint[0] < myX) {
-					turnTo(270); //turn to 270
+					turnTo(270);
 					travelToWithCorrection(tunnelMidpoint[0]+SQUARE_SIZE, myY);
 				} else {
 					turnTo(90);
 					travelToWithCorrection(tunnelMidpoint[0]-SQUARE_SIZE, myY);
 				}
 				
+				//move by sensor to center offset
 				moveStraight(SENSOR_OFFSET, true, false);
+				
+				
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
 				
-				//turn to either 0 or 180 depending on tunnel and myY
-				if(tunnelMidpoint[1] < myY) { 
-					turnTo(180);
-				} else { 
-					turnTo(0);
-				}
-
-				//now do correction with other line
+				//turn towards the y of the tunnel midpoint
+				if(tunnelMidpoint[1] < myY) turnTo(180);
+				else turnTo(0);
+				
+				//now do correction with other line essentially localizing
 				localizeLine();
 				moveStraight(SENSOR_OFFSET, true, false);
 				
-			} else {
-				System.out.println("entered this");
-				myX = odometer.getXYT()[0];
-				myY = odometer.getXYT()[1];
-				//if midpoint x coordinates are smaller, turn to 180
-				//travel to the midpoint of the tunnel tile minue one tile and while moving make sure to correct and update odometer
-				//watch out cause this method also does a turn to
+				
+			} 
+			
+			//CASE 4
+			else {
+				
+				//turn towards y value of tunnel midpoint and travel to the point before it in one tile
 				if(tunnelMidpoint[1] < myY) {
-					turnTo(180); //turn to 180
+					turnTo(180); 
 					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
 				} else {
 					turnTo(0);
 					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
 				}
 
-				//turn and move to the x of the tunnel tile + or minus 1
-				//so keep the same x but travel to the y
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
+				
+				//move towards x value *just before* tunnel midpoint 
 				if(tunnelMidpoint[0] < myX) {
-					turnTo(270); //turn to 0 
+					turnTo(270); 
 					travelToWithCorrection(tunnelMidpoint[0]+SQUARE_SIZE, myY);
 				} else {
 					turnTo(90);
 					travelToWithCorrection(tunnelMidpoint[0]-SQUARE_SIZE, myY);
 				}
 				
+				//move by sensor to center offset
 				moveStraight(SENSOR_OFFSET, true, false);
+				
+				
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
 				
-				//turn to either 180 or 0 depending on tunnel and myY
-				if(tunnelMidpoint[1] < myY) { //if midpoint y smaller than myY turn to 180
-					turnTo(180);
-				} else { //if midpoint y larger than myY turn to 0
-					turnTo(0);
-				}
-
-				//now do correction with other line
+				//turn towards tunnel y value
+				if(tunnelMidpoint[1] < myY) turnTo(180);
+				else  turnTo(0);
+				
+				//now do correction with other line essentially localizing
 				localizeLine();
 				moveStraight(SENSOR_OFFSET, true, false);
 			}
 		}
+		
+		//for all cases tunnel now is either to left or right
+		//turn to midpoint of tunnel and go through it
+		myX = odometer.getXYT()[0];
+		myY = odometer.getXYT()[1];
+		double absAngle = Math.toDegrees(Math.atan2((tunnelMidpoint[0] - myX), (tunnelMidpoint[1] - myY)));
+		turnTo(absAngle); 
+		
+		setSpeedAcceleration(TUNNEL_SPPED, TUNNEL_ACCEL);
+		moveStraight(SQUARE_SIZE * 3.6, true, false);
 	}
+	
+	
+	/**
+	 * This method is passed in either x values or y values (only) of both the tunnel and robot values;
+	 * must pass in either both x values or both y values. Checks to see if the absolute distance is within 
+	 * one tile.
+	 * @param tunnelValue : x or y value of tunnel midpoint
+	 * @param robotValue : x or y value of robot current position
+	 * @return : true if within one tile
+	 */
+	public static boolean isTunnelWithinOneTile(double tunnelValue, double robotValue) {
+		if (Math.abs(tunnelValue - robotValue) < SQUARE_SIZE + 4) // 4 added incase odometry error
+			return true;
+		else 
+			return false;
+	}
+	
 	
 	
 	/**
@@ -267,90 +316,82 @@ public class Navigation {
 	 * @throws OdometerExceptions
 	 */ 
 	public static void travelToWithCorrection(double x, double y) throws OdometerExceptions {
-		
-		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACC);
 		// Define variables
 		double odo[] = { 0, 0, 0 }, absAngle = 0, dist = 0, deltaX = 0, deltaY = 0;
 		
-		// Get odometer readings
-		odo = odometer.getXYT();
-		
-		
-		// Get displacement to travel on X and Y axis
-		deltaX = x - odo[0];
-		deltaY = y - odo[1];
-
-		// Displacement to point (hypothenuse)
-		dist = Math.hypot(Math.abs(deltaX), Math.abs(deltaY));
-		
-
-		
-
-		// Get absolute angle the robot must be facing
-		absAngle = Math.toDegrees(Math.atan2(deltaX, deltaY));
-
-		turnTo(absAngle); 
-		
-		//need a part here that says if its going to end on a line, make it end with the offset already done
-		
-		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
-		//if displacement is less than a tile then we will not cross line, so travel normally to coordinate
-		if(dist < SQUARE_SIZE - 1 ) {
-			System.out.print("2");
-			moveStraight(dist, true, false);
-		} else  {
-			System.out.print("1");
-			double oldSampleRight = 0;
-			double oldSampleLeft = 0;
-			float[] newColorLeft = new float[leftSampleProvider.sampleSize()];
-			float[] newColorRight = new float[rightSampleProvider.sampleSize()];
-
-			leftMotor.forward();
-			rightMotor.forward();
-
-			int foundLeft = 0; int foundRight = 0;
+		//if it has not arrived move again
+		while(!hasArrived(x, y)) {
 			
-			while(true) {
-				// Get color sensor readings
-				leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
-				rightSampleProvider.fetchSample(newColorRight, 0); 
-
-				// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
-				if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
-					leftMotor.stop(true);
-					foundLeft++;
-				}
-				// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-				if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
-					rightMotor.stop(true);
-					foundRight++;
-				}
-				// Store last color samples
-				oldSampleLeft = newColorLeft[0];
-				oldSampleRight = newColorRight[0];
-
-				// If line found for both sensors, exit
-				if(foundLeft == 1 && foundRight == 1) {
-					break;
-				}
-			}
-			//perform correction of odometer here when sensors are on top of lines
-			correctOdometer();
-			
+			// Get odometer readings
 			odo = odometer.getXYT();
-			Display.displayNavigation(odo[0], odo[1], odo[2]);
 			
-		}	
-		
-		//if it has not arrived yet to destination, recursively call
-		if(!hasArrived(x, y)) {
-			travelToWithCorrection(x, y);
+			// Get displacement to travel on X and Y axis
+			deltaX = x - odo[0];
+			deltaY = y - odo[1];
+
+			// Displacement to point (hypothenuse)
+			dist = Math.hypot(Math.abs(deltaX), Math.abs(deltaY));
+			
+			// Get absolute angle the robot must be facing
+			absAngle = Math.toDegrees(Math.atan2(deltaX, deltaY));
+
+			turnTo(absAngle); 
+			
+			
+			setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+			
+			//we either move to a line or to half a tile, if its half move straight without correction
+			if(dist < SQUARE_SIZE - 4 ) {
+				moveStraight(dist, true, false);
+			} else  {
+				
+				double oldSampleRight = 0;
+				double oldSampleLeft = 0;
+				float[] newColorLeft = new float[leftSampleProvider.sampleSize()];
+				float[] newColorRight = new float[rightSampleProvider.sampleSize()];
+
+				leftMotor.forward();
+				rightMotor.forward();
+
+				int foundLeft = 0; int foundRight = 0;
+				
+				while(true) {
+					// Get color sensor readings
+					leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
+					rightSampleProvider.fetchSample(newColorRight, 0); 
+
+					// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
+					if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
+						leftMotor.stop(true);
+						foundLeft++;
+					}
+					// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
+					if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
+						rightMotor.stop(true);
+						foundRight++;
+					}
+					// Store last color samples
+					oldSampleLeft = newColorLeft[0];
+					oldSampleRight = newColorRight[0];
+
+					// If line found for both sensors, exit
+					if(foundLeft == 1 && foundRight == 1) {
+						break;
+					}
+				}
+				//perform correction of odometer here when sensors are on top of lines
+				correctOdometer();
+				
+				//display the corrected values 
+				odo = odometer.getXYT();
+				Display.displayNavigation(odo[0], odo[1], odo[2]);
+				
+			}	
 		}
 	}
 	
 	
 	private static void localizeLine() throws OdometerExceptions {
-		System.out.println("\n now doing localizeline");
 		
 		int foundLeft = 0;
 		int foundRight = 0;
@@ -458,6 +499,9 @@ public class Navigation {
 		else isTunnelVertical = true;
 	}
 	
+	
+	
+	
 	/**
 	 * This method finds and returns the midpoint of the start of the tunnel relative 
 	 * to the starting zone and team our robot is on. It assumes the find tunnel heading
@@ -477,6 +521,87 @@ public class Navigation {
 		return midpoint;
 	}
 	
+	
+	public static void testFiniteDifferencesLightSensor() {
+		int window = 3;
+		ArrayList<Float> currentSamplesLeft = new ArrayList<Float>();
+		ArrayList<Float> currentSamplesRight = new ArrayList<Float>();
+		float[] newColorLeft = new float[leftSampleProvider.sampleSize()];
+		float[] newColorRight = new float[rightSampleProvider.sampleSize()];
+		leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
+		rightSampleProvider.fetchSample(newColorRight, 0); 
+		currentSamplesLeft.add(newColorLeft[0]);
+		currentSamplesRight.add(newColorRight[0]);
+		leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
+		rightSampleProvider.fetchSample(newColorRight, 0); 
+		currentSamplesLeft.add(newColorLeft[0]);
+		currentSamplesRight.add(newColorRight[0]);
+		leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
+		rightSampleProvider.fetchSample(newColorRight, 0); 
+		currentSamplesLeft.add(newColorLeft[0]);
+		currentSamplesRight.add(newColorRight[0]);
+		
+
+		float oldAverageLeft = findInitialAverage(currentSamplesLeft);
+		float sample_k_n_left = currentSamplesLeft.remove(0);
+		float oldAverageRight = findInitialAverage(currentSamplesRight); 
+		float sample_k_n_right = currentSamplesRight.remove(0);
+		
+		leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
+		rightSampleProvider.fetchSample(newColorRight, 0); 
+		currentSamplesLeft.add(newColorLeft[0]);
+		currentSamplesRight.add(newColorRight[0]);
+		
+		float newAverageLeft = oldAverageLeft + (1/window)*(newColorLeft[0]-sample_k_n_left);
+		float newAverageRight = oldAverageRight + (1/window)*(newColorLeft[0]-sample_k_n_right);
+		
+
+
+		leftMotor.forward();
+		rightMotor.forward();
+		
+		int foundLeft = 0; int foundRight = 0;
+		
+		while(true) {
+			// Get color sensor readings
+			leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
+			rightSampleProvider.fetchSample(newColorRight, 0); 
+			sample_k_n_left = currentSamplesLeft.remove(0);
+			sample_k_n_right = currentSamplesRight.remove(0);
+			currentSamplesLeft.add(newColorLeft[0]);
+			currentSamplesRight.add(newColorRight[0]);
+			newAverageLeft = oldAverageLeft + (1/window)*(newColorLeft[0]-sample_k_n_left);
+			newAverageRight = oldAverageRight + (1/window)*(newColorLeft[0]-sample_k_n_right);
+			
+			//if f(xi+1) - f(x) <= 0 reached peak of line
+			//	YOU CAN TRY TO CHANGE 0 to -0.05 or some shit to say the change must be strong
+			if(((newAverageLeft - oldAverageLeft) <= 0) && foundLeft == 0) {
+				leftMotor.stop(true);
+				foundLeft++;
+			}
+			if(((newAverageRight - oldAverageRight) <= 0)  && foundRight == 0) {
+				rightMotor.stop(true);
+				foundRight++;
+			}
+			
+			// Store last averages
+			oldAverageLeft = newAverageLeft;
+			oldAverageRight = newAverageRight;
+
+			// If line found for both sensors, exit
+			if(foundLeft == 1 && foundRight == 1) {
+				break;
+			}
+		}
+		
+	}
+	
+	public static float findInitialAverage(ArrayList<Float> samples) {
+		float sum = 0;
+		for(Float sample : samples)
+		    sum += sample;
+		return sum/samples.size();
+	}
 
 	/**
 	 * This method causes the robot to travel to the absolute field location (x,
@@ -506,7 +631,7 @@ public class Navigation {
 	public static void turnTo(double theta) {
 		double dTheta = theta - odometer.getXYT()[2];
 		if(dTheta < 0) dTheta += 360;
-		setSpeedAcceleration(ROTATE_SPEED, ROTATE_ACC);
+		setSpeedAcceleration(ROTATE_SPEED, ROTATE_ACCEL);
 
 		if (dTheta > 180) { // turn left
 			leftMotor.rotate(-convertAngle(360 - dTheta), true);

@@ -14,10 +14,13 @@ import lejos.hardware.sensor.SensorModes;
 import lejos.robotics.SampleProvider;
 
 /*
-//////////////
-////TODO//////
+////////////////////////////////////
+/////////////// TODO ///////////////
  * check if turnto method works properly, it might do 360 turns because the odometer is already off and it thinks its heading another direction
-/////////////
+ * add median filter for the light sensors
+ * able to receive values from wifi
+ * running slowly, increase speed, if cant its because too much power on cpu
+////////////////////////////////////
 */
 
 
@@ -28,7 +31,6 @@ import lejos.robotics.SampleProvider;
  */
 public class AutonomousRetrievalRobot {
 	
-
 	static Odometer odometer = null;
 	static Navigation nav = null;
 	static UltrasonicLocalizer usLocalizer;
@@ -72,30 +74,24 @@ public class AutonomousRetrievalRobot {
 	}
 	
 
-	
-	/*
-	 * Writing main in specific methods so that
-	 * merging will not cause any issues
-	 */
-	public static void mainFouad() throws OdometerExceptions {
+	public static void main(String[] args) throws OdometerExceptions {
 		
 		Display.displayStartScreen(); 
 		
-		initialize(); 
+		initialize(); 	//initialize class variables needed
+		
+		usLocalizer.fallingEdge();						//us localize
+		
+		lightLocalizer.localize(Navigation.RedCorner); 	//light localize
+		
+		Navigation.travel_Start_To_Tunnel();
+		
+		Navigation.setSpeedAcceleration(200, 1500);
+		Navigation.moveStraight(Navigation.SQUARE_SIZE/2, true, false);
+		Navigation.turnTo(0);
+		Navigation.moveStraight(Navigation.SQUARE_SIZE*3.5, true, false);
 		
 		
-		usLocalizer.fallingEdge();
-
-		lightLocalizer.localize(Navigation.RedCorner); 
-
-		
-		
-		
-	}
-
-	
-	
-	public static void main(String[] args) {
 	}
 
 }

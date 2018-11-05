@@ -2,6 +2,7 @@ package ca.mcgill.ecse211.localizers;
 
 import java.util.ArrayList;
 
+import ca.mcgill.ecse211.ARR.Display;
 import ca.mcgill.ecse211.ARR.Navigation;
 import ca.mcgill.ecse211.odometer.Odometer;
 import ca.mcgill.ecse211.odometer.OdometerExceptions;
@@ -24,8 +25,8 @@ public class LightLocalizer {
 	private static SampleProvider rightSample;
 
 	private static Odometer odo;
-	private static final int LIGHTLOC_MOTOR_SPEED = 100;
-	private static final int LIGHTLOC_MOTOR_ACCELERATION = 1000;
+	private static final int LIGHTLOC_MOTOR_SPEED = 170;
+	private static final int LIGHTLOC_MOTOR_ACCELERATION = 1500;
 	private static final int RIGHT_ANGLE = 90;
 	public static boolean isLightLocalizing = false;
 	static ArrayList<Double> points = new ArrayList<Double>();
@@ -70,6 +71,9 @@ public class LightLocalizer {
 		
 		//correct the odometer 
 		correctOdometer(startingCorner);
+		
+		double[] data = odo.getXYT();
+		Display.displayNavigation(data[0], data[1], data[2]);
 		
 		isLightLocalizing = false;
 		

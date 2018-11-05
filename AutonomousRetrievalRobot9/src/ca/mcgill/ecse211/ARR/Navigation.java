@@ -19,14 +19,14 @@ public class Navigation {
 	// - TR: team red, TG: team green, BR: bridge
 	public static final int RedTeam = 0; 		//this theyll probs give i.e. redTeam = 9 for our group number
 	public static final int GreenTeam = 0; 
-	public static final int RedCorner = -1; 	//i think this is a number from 0-3
+	public static final int RedCorner = 0; 	//i think this is a number from 0-3
 	public static final int GreenCorner = -1;
 	public static final int[] Red_LL = {0,0}; 
 	public static final int[] Red_UR = {0,0}; 
 	public static final int[] Green_LL = {0,0}; 
 	public static final int[] Green_UR = {0,0}; 
-	public static final int[] BRR_LL = {0,0}; 
-	public static final int[] BRR_UR = {0,0};
+	public static final int[] BRR_LL = {3,3}; 
+	public static final int[] BRR_UR = {4,5};
 	public static final int[] BRG_LL = {0,0}; 
 	public static final int[] BRG_UR = {0,0}; 
 	public static final int[] TR_LL = {0,0}; 
@@ -35,14 +35,14 @@ public class Navigation {
 	public static final int[] TG_UR = {0,0}; 
 	
 	
-	private static final int ROTATE_SPEED = 100;
-	private static final int ROTATE_ACC = 1000;
-	private static final int NAV_WITH_CORR_SPEED = 130;
-	private static final int NAV_WITH_CORR_ACCEL = 1000;
-	public static final double WHEEL_RAD = 0;
-	public static final double TRACK = 0;
+	private static final int ROTATE_SPEED = 150;
+	private static final int ROTATE_ACC = 1500;
+	private static final int NAV_WITH_CORR_SPEED = 190;
+	private static final int NAV_WITH_CORR_ACCEL = 1500;
+	public static final double WHEEL_RAD = 2.2;
+	public static final double TRACK = 12.85;
 	public static final double SQUARE_SIZE = 30.48;
-	public static final double SENSOR_OFFSET = 6.4;
+	public static final double SENSOR_OFFSET = 4.9;
 
 	private static Odometer odometer;
 	private static boolean isNavigating;
@@ -50,6 +50,7 @@ public class Navigation {
 
 	public static final EV3LargeRegulatedMotor leftMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
 	public static final EV3LargeRegulatedMotor rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
+	private static final int NAV_WITH_CORR_ACC = 0;
 	
 	
 	private static SampleProvider leftSampleProvider;
@@ -80,6 +81,7 @@ public class Navigation {
 		//take the tunnel coordinates and calculate the midpoint and whether tunnel is vertically or horizontally laid
 		findTunnelHeading();
 		double[] tunnelMidpoint = findTunnelMidpoint();
+		System.out.println("" + isTunnelVertical);
 		double myX = odometer.getXYT()[0];
 		double myY = odometer.getXYT()[1];
 
@@ -166,7 +168,7 @@ public class Navigation {
 		//if horizontally laid out, move by y first
 		else { 
 			double midpointToRobot = Math.abs(tunnelMidpoint[1] - myY); //this is to check to see if its within 1 tile (case 1 or 2)
-			if(midpointToRobot < 35.0) {
+			if(midpointToRobot < 30.0) {
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
 				//if midpoint y coordinates are smaller, turn to 0
@@ -205,7 +207,7 @@ public class Navigation {
 				moveStraight(SENSOR_OFFSET, true, false);
 				
 			} else {
-				
+				System.out.println("entered this");
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
 				//if midpoint x coordinates are smaller, turn to 180
@@ -213,10 +215,10 @@ public class Navigation {
 				//watch out cause this method also does a turn to
 				if(tunnelMidpoint[1] < myY) {
 					turnTo(180); //turn to 180
-					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
+					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
 				} else {
 					turnTo(0);
-					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
+					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
 				}
 
 				//turn and move to the x of the tunnel tile + or minus 1
@@ -265,6 +267,8 @@ public class Navigation {
 	 * @throws OdometerExceptions
 	 */ 
 	public static void travelToWithCorrection(double x, double y) throws OdometerExceptions {
+		
+		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACC);
 		// Define variables
 		double odo[] = { 0, 0, 0 }, absAngle = 0, dist = 0, deltaX = 0, deltaY = 0;
 		
@@ -279,7 +283,7 @@ public class Navigation {
 		// Displacement to point (hypothenuse)
 		dist = Math.hypot(Math.abs(deltaX), Math.abs(deltaY));
 		
-		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+
 		
 
 		// Get absolute angle the robot must be facing
@@ -287,15 +291,19 @@ public class Navigation {
 
 		turnTo(absAngle); 
 		
+		//need a part here that says if its going to end on a line, make it end with the offset already done
+		
+		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 		//if displacement is less than a tile then we will not cross line, so travel normally to coordinate
-		if(dist <= SQUARE_SIZE) {
+		if(dist < SQUARE_SIZE - 1 ) {
+			System.out.print("2");
 			moveStraight(dist, true, false);
-		} else {
+		} else  {
+			System.out.print("1");
 			double oldSampleRight = 0;
 			double oldSampleLeft = 0;
 			float[] newColorLeft = new float[leftSampleProvider.sampleSize()];
 			float[] newColorRight = new float[rightSampleProvider.sampleSize()];
-
 
 			leftMotor.forward();
 			rightMotor.forward();
@@ -308,12 +316,12 @@ public class Navigation {
 				rightSampleProvider.fetchSample(newColorRight, 0); 
 
 				// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
-				if((newColorLeft[0]) < 0.4 && oldSampleLeft > 0.4 && foundLeft == 0) {
+				if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
 					leftMotor.stop(true);
 					foundLeft++;
 				}
 				// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-				if((newColorRight[0]) < 0.4 && oldSampleRight > 0.4 && foundRight == 0) {
+				if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
 					rightMotor.stop(true);
 					foundRight++;
 				}
@@ -329,6 +337,9 @@ public class Navigation {
 			//perform correction of odometer here when sensors are on top of lines
 			correctOdometer();
 			
+			odo = odometer.getXYT();
+			Display.displayNavigation(odo[0], odo[1], odo[2]);
+			
 		}	
 		
 		//if it has not arrived yet to destination, recursively call
@@ -339,6 +350,7 @@ public class Navigation {
 	
 	
 	private static void localizeLine() throws OdometerExceptions {
+		System.out.println("\n now doing localizeline");
 		
 		int foundLeft = 0;
 		int foundRight = 0;
@@ -348,23 +360,23 @@ public class Navigation {
 		float[] newColorLeft = new float[leftSampleProvider.sampleSize()];
 		float[] newColorRight = new float[rightSampleProvider.sampleSize()];
 
-		Navigation.leftMotor.forward();
-		Navigation.rightMotor.forward();
+		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 		
-
-
+		leftMotor.forward();
+		rightMotor.forward();
+		
 		while(true) {
 			// Get color sensor readings
 			leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
 			rightSampleProvider.fetchSample(newColorRight, 0); 
 
 			// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
-			if((newColorLeft[0]) < 0.4 && oldSampleLeft > 0.4 && foundLeft == 0) {
+			if((newColorLeft[0]) < 0.28 && oldSampleLeft > 0.28 && foundLeft == 0) {
 				leftMotor.stop(true);
 				foundLeft++;
 			}
 			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorRight[0]) < 0.4 && oldSampleRight > 0.4 && foundRight == 0) {
+			if((newColorRight[0]) < 0.28 && oldSampleRight > 0.28 && foundRight == 0) {
 				rightMotor.stop(true);
 				foundRight++;
 			}
@@ -390,7 +402,7 @@ public class Navigation {
 		double xf = odometer[0];
 		double yf = odometer[1];
 		double cErr = Math.hypot(xf - xd, yf - yd);
-		return cErr < 4;
+		return cErr < 6;
 	}
 	
 	//if moving along x axis only allowed to correct x, if along y axis then correct y
@@ -441,7 +453,7 @@ public class Navigation {
 	 * Used by travel_Start_To_Tunnel method to calculate ideal trajectory.
 	 */
 	public static void findTunnelHeading() {
-		int differenceInXCoord = BRR_LL[0] - BRR_UR[0];
+		int differenceInXCoord = Math.abs(BRR_LL[0] - BRR_UR[0]);
 		if(differenceInXCoord == 2) isTunnelVertical = false;
 		else isTunnelVertical = true;
 	}
@@ -546,8 +558,8 @@ public class Navigation {
 	 * @param acceleration
 	 */
 	public static void setSpeedAcceleration(int speed, int acceleration) {
-		Navigation.leftMotor.setAcceleration(acceleration);
-		Navigation.rightMotor.setAcceleration(acceleration);
+		leftMotor.setAcceleration(acceleration);
+		rightMotor.setAcceleration(acceleration);
 		leftMotor.setSpeed(speed);
 		rightMotor.setSpeed(speed);
 	}
@@ -567,5 +579,6 @@ public class Navigation {
 	public boolean isNavigating() {
 		return isNavigating;
 	}
+	
 
 }

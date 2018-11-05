@@ -1,6 +1,6 @@
 package ca.mcgill.ecse211.localizers;
 
-import ca.mcgill.ecse211.ARR.Display;
+//import ca.mcgill.ecse211.ARR.Display;
 import ca.mcgill.ecse211.ARR.Navigation;
 import ca.mcgill.ecse211.odometer.*;
 import lejos.robotics.SampleProvider;
@@ -14,13 +14,13 @@ import lejos.robotics.SampleProvider;
  */
 public class UltrasonicLocalizer {
 
-	private static final int USLOC_MOTOR_SPEED = 80;
-	private static final int USLOC_MOTOR_ACCELERATION = 1000;
+	private static final int USLOC_MOTOR_SPEED = 170;
+	private static final int USLOC_MOTOR_ACCELERATION = 2000;
 	private static final int D_THRESHHOLD = 30;
 	private static final int NOISE_MARGIN = 5;
-	public static double ALPHA = 0;
-	public static double BETA = 0;
-	public static double FINAL_ANGLE = 0;
+	private static double ALPHA = 0;
+	private static double BETA = 0;
+//	private static double FINAL_ANGLE = 0;
 	private static final int FILTER_OUT = 15;
 	private int filterControl;
 	public float[] usData;
@@ -32,6 +32,7 @@ public class UltrasonicLocalizer {
 
 	public UltrasonicLocalizer(SampleProvider usSampleProvider) {
 		usSample = usSampleProvider;
+		usData = new float[usSample.sampleSize()];
 	}
 
 	public void processUSData(int d) {
@@ -44,10 +45,10 @@ public class UltrasonicLocalizer {
 			filterControl = 0;
 			distance = d;
 		}
-		// Print values for debugging
-		if(UltrasonicLocalizer.isUSLocalizing) {
-			Display.displayUSLocalization(distance, ALPHA, BETA, FINAL_ANGLE);
-		} 
+//		// Print values for debugging
+//		if(UltrasonicLocalizer.isUSLocalizing) {
+//			Display.displayUSLocalization(distance, ALPHA, BETA, FINAL_ANGLE);
+//		} 
 	}
 
 	/**
@@ -63,7 +64,7 @@ public class UltrasonicLocalizer {
 		//Instantiate odometer storage and set theta of odometer to 0
 		double[] odometer = {0,0,0};
 		boolean isAboveThresh = false;
-		double angleCorrection = 0;
+//		double angleCorrection = 0;
 		Odometer.getOdometer().setTheta(0);
 		
 		usSample.fetchSample(usData, 0); // acquire data
@@ -125,20 +126,33 @@ public class UltrasonicLocalizer {
 			}
 		}
 
-		// Alpha and Beta algorithms
-		if (ALPHA < BETA) {
-			angleCorrection = 40 - ((ALPHA + BETA) / 2); 
-		} else {
-			angleCorrection = 220 - ((ALPHA + BETA) / 2);
-		} 
-
-		// Set theta to 0 to apply correction
-		// from current reference angle
-		//Odometer.getOdometer().setTheta(0);
-		FINAL_ANGLE = 180-(angleCorrection + odometer[2]);
-		Navigation.turnTo(FINAL_ANGLE);
+		double dTheta = 225.0 - (ALPHA+BETA)/2.0;
+		correctAngle(dTheta);
+		
+		
+//		// Alpha and Beta algorithms
+//		if (ALPHA < BETA) {
+//			angleCorrection = 40 - ((ALPHA + BETA) / 2); 
+//		} else {
+//			angleCorrection = 220 - ((ALPHA + BETA) / 2);
+//		} 
+//
+//		// Set theta to 0 to apply correction
+//		// from current reference angle
+//		//Odometer.getOdometer().setTheta(0);
+//		FINAL_ANGLE = 180-(angleCorrection + odometer[2]);
+//		Navigation.turnTo(FINAL_ANGLE);
 
 		isUSLocalizing = false;
+	}
+
+	
+	public void correctAngle(double dTheta) throws OdometerExceptions {
+		Odometer odo = Odometer.getOdometer();
+		double newTheta = (odo.getXYT()[2] + dTheta) % 360;
+		odo.setTheta(newTheta);
+		int turnAngle = (int) (360.0 - (newTheta));
+		Navigation.turnRobot(turnAngle, true, false);
 	}
 
 
@@ -149,6 +163,8 @@ public class UltrasonicLocalizer {
 	 */
 	void findWallAbove() {
 		while (true) {
+			usSample.fetchSample(usData, 0); // acquire data
+			processUSData((int) (usData[0] * 100.0)); // extract from buffer, cast to int, process data
 			Navigation.leftMotor.forward();
 			Navigation.rightMotor.backward();
 			if (distance > (D_THRESHHOLD + NOISE_MARGIN)) {

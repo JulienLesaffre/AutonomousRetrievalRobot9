@@ -106,28 +106,28 @@ public class AutonomousRetrievalRobot {
 
 	public static void main(String[] args) throws OdometerExceptions {
 		
-		int buttonChoice;
-
-		do {
-			// clear the display
-			lcd.clear();
-
-			// ask the user whether the motor should drive in a square or float
-			lcd.drawString("READY ?", 2, 3);
-
-
-			buttonChoice = Button.waitForAnyPress(); // Record choice (left or right press)
-		} while (buttonChoice != Button.ID_ENTER);
-		
-		if (buttonChoice == Button.ID_ENTER) {
+//		int buttonChoice;
+//
+//		do {
+//			// clear the display
+//			lcd.clear();
+//
+//			// ask the user whether the motor should drive in a square or float
+//			lcd.drawString("READY ?", 5, 3);
+//
+//
+//			buttonChoice = Button.waitForAnyPress(); // Record choice (left or right press)
+//		} while (buttonChoice != Button.ID_ENTER);
+//		
+//		if (buttonChoice == Button.ID_ENTER) {
 			
 //			initialize(); 
 			RingSet.testRingSet();
-
+			System.exit(0);
 
 
 			
-		}
+//		}
 
 		while (Button.waitForAnyPress() != Button.ID_ESCAPE);
 		System.exit(0);

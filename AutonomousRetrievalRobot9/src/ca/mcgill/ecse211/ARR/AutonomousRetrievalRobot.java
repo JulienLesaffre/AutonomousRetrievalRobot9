@@ -3,6 +3,7 @@
  */
 package ca.mcgill.ecse211.ARR;
 
+import ca.mcgill.ecse211.WiFiClient.WifiConnection;
 import ca.mcgill.ecse211.localizers.LightLocalizer;
 import ca.mcgill.ecse211.localizers.UltrasonicLocalizer;
 import ca.mcgill.ecse211.odometer.Odometer;
@@ -12,6 +13,8 @@ import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorModes;
 import lejos.robotics.SampleProvider;
+import java.util.Map;
+import lejos.hardware.Button;
 
 /*
 ////////////////////////////////////
@@ -52,10 +55,15 @@ public class AutonomousRetrievalRobot {
 	static Navigation nav = null;
 	static UltrasonicLocalizer usLocalizer;
 	static LightLocalizer lightLocalizer;
-	
+
 	private static SampleProvider leftSampleProvider;
 	private static SampleProvider rightSampleProvider;
 	private static SampleProvider usSampleProvider;
+
+	//wifi connection parameters
+	private static final String SERVER_IP = "192.168.2.1";
+	private static final int TEAM_NUMBER = 9;
+	private static final boolean ENABLE_DEBUG_WIFI_PRINT = true;
 
 
 	/**
@@ -90,12 +98,68 @@ public class AutonomousRetrievalRobot {
 		
 	}
 	
+	@SuppressWarnings("rawtypes")
+	private static void retrieveDataFromServer() {
+		
+		// Initialize WifiConnection class
+		WifiConnection conn = new WifiConnection(SERVER_IP, TEAM_NUMBER, ENABLE_DEBUG_WIFI_PRINT);
+
+		// Connect to server and get the data, catching any errors that might occur
+		try {
+			
+			//waits till start button pushed
+			//can kill while waiting by pressing escape button
+			Map data = conn.getData();
+
+			//assign all the corresponding variables by retrieving the data
+			Navigation.RedTeam = ((Long) data.get("RedTeam")).intValue();
+			Navigation.GreenTeam = ((Long) data.get("GreenTeam")).intValue();
+			Navigation.RedCorner = ((Long) data.get("RedCorner")).intValue();
+			Navigation.GreenCorner = ((Long) data.get("GreenCorner")).intValue();
+			Navigation.Red_LL_x = ((Long) data.get("Red_LL_x")).intValue();
+			Navigation.Red_LL_y = ((Long) data.get("Red_LL_y")).intValue();
+			Navigation.Red_UR_x = ((Long) data.get("Red_UR_x")).intValue();
+			Navigation.Red_UR_y = ((Long) data.get("Red_UR_y")).intValue();
+			Navigation.Green_LL_x = ((Long) data.get("Green_LL_x")).intValue();
+			Navigation.Green_LL_y = ((Long) data.get("Green_LL_y")).intValue();
+			Navigation.Green_UR_x = ((Long) data.get("Green_UR_x")).intValue();
+			Navigation.Green_UR_y = ((Long) data.get("Green_UR_y")).intValue();
+			Navigation.Island_LL_x = ((Long) data.get("Island_LL_x")).intValue();
+			Navigation.Island_LL_y = ((Long) data.get("Island_LL_y")).intValue();
+			Navigation.Island_UR_x = ((Long) data.get("Island_UR_x")).intValue();
+			Navigation.Island_UR_y = ((Long) data.get("Island_UR_y")).intValue();
+			Navigation.TNR_LL_x = ((Long) data.get("TNR_LL_x")).intValue();
+			Navigation.TNR_LL_y = ((Long) data.get("TNR_LL_y")).intValue();
+			Navigation.TNR_UR_x = ((Long) data.get("TNR_UR_x")).intValue();
+			Navigation.TNR_UR_y = ((Long) data.get("TNR_UR_y")).intValue();
+			Navigation.TNG_LL_x = ((Long) data.get("TNG_LL_x")).intValue();
+			Navigation.TNG_LL_y = ((Long) data.get("TNG_LL_y")).intValue();
+			Navigation.TNG_UR_x = ((Long) data.get("TNG_UR_x")).intValue();
+			Navigation.TNG_UR_y = ((Long) data.get("TNG_UR_y")).intValue();
+			Navigation.TR_x = ((Long) data.get("TR_x")).intValue();
+			Navigation.TR_y = ((Long) data.get("TR_y")).intValue();
+			Navigation.TG_x = ((Long) data.get("TG_x")).intValue();
+			Navigation.TG_y = ((Long) data.get("TG_y")).intValue();
+
+		} catch (Exception e) {
+			//throws exception when: wrong IP, server not running, not connected to WIFI
+			//also throws exception if: recieves bad data, message from server, e.g. make sure TEAM numb correct
+			System.err.println("Error: " + e.getMessage());
+		}
+		// Wait until user decides to continue
+		Button.waitForAnyPress();
+	}
+	
+	
+	
 
 	public static void main(String[] args) throws OdometerExceptions {
 		
 		Display.displayStartScreen(); 
 		
-		initialize(); 	//initialize class variables needed
+		initialize(); 									//initialize class variables needed
+		
+		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		
 		usLocalizer.fallingEdge();						//us localize
 		
@@ -103,12 +167,7 @@ public class AutonomousRetrievalRobot {
 		
 		Navigation.travelStartToTunnel();
 		
-		Navigation.setSpeedAcceleration(200, 1500);
-		Navigation.moveStraight(Navigation.SQUARE_SIZE/2, true, false);
-		Navigation.turnTo(0);
-		Navigation.moveStraight(Navigation.SQUARE_SIZE*3.5, true, false);
-		
-		
+
 	}
 
 }

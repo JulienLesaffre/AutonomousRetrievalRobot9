@@ -15,24 +15,36 @@ import ca.mcgill.ecse211.odometer.*;
  */
 public class Navigation {
 
-	// Game parameters (will be provided with Wifi Class)
-	// - TR: team red, TG: team green, BR: bridge
-	public static final int RedTeam = 0; 		//this theyll probs give i.e. redTeam = 9 for our group number and we check which values we are
-	public static final int GreenTeam = 0; 
-	public static final int RedCorner = 0; 		//i think this is a number from 0-3
-	public static final int GreenCorner = -1;
-	public static final int[] Red_LL = {0,0}; 
-	public static final int[] Red_UR = {0,0}; 
-	public static final int[] Green_LL = {0,0}; 
-	public static final int[] Green_UR = {0,0}; 
-	public static final int[] BRR_LL = {1,3}; 
-	public static final int[] BRR_UR = {2,5};
-	public static final int[] BRG_LL = {0,0}; 
-	public static final int[] BRG_UR = {0,0}; 
-	public static final int TR_x = -1;
-	public static final int TR_y = -1;
-	public static final int TG_x = -1; 
-	public static final int TG_y = -1;
+	//Game parameters
+	public static int RedTeam = -1; 		
+	public static int GreenTeam = -1; 
+	public static int RedCorner = -1; 
+	public static int GreenCorner = -1;
+	public static int Red_LL_x = -1;
+	public static int Red_LL_y = -1;
+	public static int Red_UR_x = -1;
+	public static int Red_UR_y = -1;
+	public static int Green_LL_x = -1; 
+	public static int Green_LL_y = -1; 
+	public static int Green_UR_x = -1;
+	public static int Green_UR_y = -1;
+	public static int Island_LL_x = -1;
+	public static int Island_LL_y = -1;
+	public static int Island_UR_x = -1;
+	public static int Island_UR_y = -1;
+	public static int TNR_LL_x = -1;
+	public static int TNR_LL_y = -1;
+	public static int TNR_UR_x = -1;
+	public static int TNR_UR_y = -1;
+	public static int TNG_LL_x = -1;
+	public static int TNG_LL_y = -1;
+	public static int TNG_UR_x = -1;
+	public static int TNG_UR_y = -1;
+	public static int TR_x = -1;
+	public static int TR_y = -1;
+	public static int TG_x = -1;
+	public static int TG_y = -1;
+	
 	
 	//Speed and acceleration
 	private static final int ROTATE_SPEED = 150;
@@ -284,22 +296,23 @@ public class Navigation {
 	}
 	
 	
+	/**
+	 * This method takes the robot from just having gone outside the tunnel to the ring set
+	 * so that it is in position to start circling the set detecting the ring colors. There
+	 * are two cases of traversing. Since the robot ends in middle of tunnel tile and ring 
+	 * sets are placed on intersections, the set will either be to the left or right of tunnel.
+	 * If to the left we move to the closest tile (bottom right of four surrounding tiles relative
+	 * to the robot heading and placement of ring set), if to the right we move to bottom right of 
+	 * four surrounding tiles. It then aligns the robot to start traversing the ring set in a 
+	 * clockwise direction.
+	 * @throws OdometerExceptions
+	 */
 	public static void travelTunnelToRingSet() throws OdometerExceptions {
-		//calculate distance from robot position to ring holders
-		//	if enemy ringholder is closer, incorporate path to avoid both their ring holder and possible trajectory of enemy robot
-		//	if our ringholder is closer travel with best trajectory
-		
-		
-		//two cases, left and right upon exit of tunnel
-		//upon exit of tunnel keeps going in same direction, so if tunnel vertical travels y first, then x, vice versa
-		//case left: the ring set relative to the robot position upon exiting the tunnel is to the left, go to bottom right 
-		//			 then start going around clockwise, first line dont detect, second line start detecting
-		//case right: the ring set relative to the robot position upon exiting is to the right, go to bottom left
-		//			 then start clockwise, first line dont detect, second line start
 		
 		String heading = getCurrentHeading();
 		double[] tunnelEndMidpoint = findTunnelMidpoint(false);
 		
+		//CASE 1: 
 		if(isRingSetToLeft()) {
 			//get bottom right and bottom left corner tiles
 			double[] bottomRightTile = new double[2];
@@ -331,7 +344,10 @@ public class Navigation {
 			turnRobot(90, true, false);
 			localizeLine();
 			
-		} else {
+		} 
+		
+		//CASE 2:
+		else {
 			//get bottom left and upper left corner tiles
 			double[] bottomLeftTile = new double[2];
 			double[] upperLeftTile = new double[2];;
@@ -352,7 +368,6 @@ public class Navigation {
 			//now move other axis to reach bottomRightTile
 			travelToWithCorrection(bottomLeftTile[0], bottomLeftTile[1]);
 			
-			
 			//ring set should be to the north/west of the robot
 			//move to line connecting bottom left to upper right, move forward offset amount, turn right, move to next line and ready for detection
 			turnToCoord(upperLeftTile[0], upperLeftTile[1]);
@@ -361,7 +376,6 @@ public class Navigation {
 			turnRobot(90, true, false);
 			localizeLine();
 		}
-		
 	}
 	
 	
@@ -373,7 +387,14 @@ public class Navigation {
 	
 	
 	
-	@SuppressWarnings("unused")
+	/** 
+	 * This method takes in the side the ring set is on relative to the heading of the robot
+	 * upon exiting the tunnel. Calculates the center coordinates of the tiles closest to the
+	 * robot in order to traverse properly to a position where it can begin to search and retrieve.
+	 * @param ringSetIsLeft : whether the ring set is to the left or right of the robot
+	 * @return : a double[] of 4 values where the first two are for the first closest tile coordinates
+	 * 			 and the second two values are second closest.
+	 */
 	public static double[] getClosestTiles(boolean ringSetIsLeft) {
 		String heading = getCurrentHeading();
 		double[] tileCoord = new double[4];
@@ -440,17 +461,21 @@ public class Navigation {
 	}
 	
 	
-	@SuppressWarnings("unused")
+
+	/**
+	 * This method uses the game parameters and the robots current heading to
+	 * calculate whether the ring set is to the left or right of the robot
+	 * upon exiting the tunnel
+	 * @return : true if ring set is to the left of the robot, false if to the right
+	 */
 	public static boolean isRingSetToLeft() {
 		//get end tunnel end midpoint, current heading of robot, ringset coordinates
 		double[] tunnelEndMidpoint = new double[2];
-		double theta;
-		boolean isToLeft = false;
-		String heading = getCurrentHeading();
-		
-		tunnelEndMidpoint = findTunnelMidpoint(false);
-		theta = odometer.getXYT()[2];
 		int ringSetX, ringSetY;
+		boolean isToLeft = false;
+		
+		String heading = getCurrentHeading();
+		tunnelEndMidpoint = findTunnelMidpoint(false);
 		
 		//if we are red team use red team ring set, else green ring set
 		if(RedTeam == 9) { 	
@@ -593,6 +618,13 @@ public class Navigation {
 	}
 	
 	
+	/**
+	 * This method assumes the robot is in the middle of a tile and is facing 
+	 * one of the sides rather than the corners. It moves the robot forward until
+	 * it detects the line in front of it and stops so that both sensors are on 
+	 * top of the line. It then calls correctOdometer() and ends.
+	 * @throws OdometerExceptions
+	 */
 	private static void localizeLine() throws OdometerExceptions {
 		
 		int foundLeft = 0;
@@ -706,7 +738,7 @@ public class Navigation {
 	 * and sets the class variable isTunnelVertical accordingly.
 	 */
 	public static void findTunnelHeading() {
-		isTunnelVertical = (Math.abs(BRR_LL[0] - BRR_UR[0]) == 2) ? false : true;
+		isTunnelVertical = (Math.abs(TNR_LL_x - TNR_UR_x) == 2) ? false : true;
 	}
 	
 	/**
@@ -732,18 +764,21 @@ public class Navigation {
 	 * @param start : boolean check, if true then method returns exit midpoint of tunnel relative to robot start and team
 	 * @return midpoint: double[] coordinates of tunnel midpoint in actual distance measurement
 	 */
-	@SuppressWarnings("unused")
 	public static double[] findTunnelMidpoint(boolean start) {
 		findTunnelHeading(); //incase not called
 		
 		//check if we are red team, then use tunnel coordinates of red team
 		int[] tunnelLL = {0, 0}, tunnelUR = {0, 0};
 		if(RedTeam == 9) { 	//if we are red team set the arrays to BRR_LL and BRR_UR 
-			tunnelLL = BRR_LL;
-			tunnelUR = BRR_UR;
+			tunnelLL[0] = TNR_LL_x;
+			tunnelLL[1] = TNR_LL_y;
+			tunnelUR[0] = TNR_UR_x;
+			tunnelUR[1] = TNR_UR_y;
 		} else {
-			tunnelLL = BRG_LL;
-			tunnelUR = BRG_UR;
+			tunnelLL[0] = TNG_LL_x;
+			tunnelLL[1] = TNG_LL_y;
+			tunnelUR[0] = TNG_UR_x;
+			tunnelUR[1] = TNG_UR_y;
 		}
 
 		double[] midpoint1 = {0,0}, midpoint2 = {0,0};
@@ -898,6 +933,13 @@ public class Navigation {
 		}
 	}
 	
+	
+	/**
+	 * This method takes two coordinates and turns the robot to face those coordinates based
+	 * on where the robot currently is.
+	 * @param x
+	 * @param y
+	 */
 	public static void turnToCoord(double x, double y) {
 		double x0 = odometer.getXYT()[0];
 		double y0 = odometer.getXYT()[1];
@@ -937,6 +979,9 @@ public class Navigation {
 		rightMotor.rotate(i * -convertAngle(degrees), continueRunning);
 	}
 	
+	/**
+	 * This methods stops both of the motors and returns immediately
+	 */
 	public void stopMotors() {
 		leftMotor.stop(true);
 		rightMotor.stop(true);
@@ -954,10 +999,22 @@ public class Navigation {
 		rightMotor.setSpeed(speed);
 	}
 
+	/**
+	 * This method converts a distance the robot would like to travel to the amount
+	 * of rotations in degrees the motor has to turn.
+	 * @param distance : distance to travel
+	 * @return : rotations in degrees
+	 */
 	public static int convertDistance(double distance) {
 		return (int) ((180.0 * distance) / (Math.PI * WHEEL_RAD));
 	}
 
+	/**
+	 * Converts the angle the robot would like to turn, to the rotations in degrees
+	 * the motor has to turn.
+	 * @param angle : angle to turn
+	 * @return : rotations in degrees
+	 */
 	public static int convertAngle(double angle) {
 		return convertDistance(Math.PI * TRACK * angle / 360.0);
 	}

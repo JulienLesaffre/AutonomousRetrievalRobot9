@@ -1,16 +1,9 @@
 package ca.mcgill.ecse211.ARR;
 
-import lejos.hardware.Sound;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
-import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.motor.NXTRegulatedMotor;
-import lejos.hardware.port.Port;
-import lejos.hardware.sensor.EV3UltrasonicSensor;
-import lejos.hardware.sensor.SensorModes;
-import lejos.robotics.SampleProvider;
 import ca.mcgill.ecse211.odometer.*;
-import ca.mcgill.ecse211.sensors.USController;
 
 /**
  * 

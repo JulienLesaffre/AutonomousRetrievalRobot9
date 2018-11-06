@@ -66,6 +66,13 @@ public class Display {
 		lcd.drawString("y: " + y, 0, 4);
 		lcd.drawString("theta: " + theta, 0, 5);
 	}
+	
+	public static void displayNavigation(double x, double y, double theta) {
+		lcd.clear();
+		lcd.drawString("x: " + x, 0, 0);
+		lcd.drawString("y: " + y, 0, 1);
+		lcd.drawString("theta: " + theta, 0, 2);
+	}
 
 
 }

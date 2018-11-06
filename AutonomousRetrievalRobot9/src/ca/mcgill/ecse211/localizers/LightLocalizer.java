@@ -2,28 +2,29 @@ package ca.mcgill.ecse211.localizers;
 
 import java.util.ArrayList;
 
+import ca.mcgill.ecse211.ARR.Display;
 import ca.mcgill.ecse211.ARR.Navigation;
 import ca.mcgill.ecse211.odometer.Odometer;
 import ca.mcgill.ecse211.odometer.OdometerExceptions;
-import ca.mcgill.ecse211.sensors.LightController;
+import lejos.robotics.SampleProvider;
 
 /**
- * This class is used by main class to call localize method
- * to perform light localization.
+ * This class performs the light localization at start of game.
  *
  */
 public class LightLocalizer {
 
 	// Instantiate Color sensor and other variables
-	static double newColorLeft;
-	static double oldSampleLeft;
-	static double newColorRight;
-	static double oldSampleRight;
+	static float[] newColorLeft;
+	static float oldSampleLeft;
+	static float[] newColorRight;
+	static float oldSampleRight;
 
-
+	private static SampleProvider leftSample;
+	private static SampleProvider rightSample;
 	private static Odometer odo;
-	private static final int LIGHTLOC_MOTOR_SPEED = 100;
-	private static final int LIGHTLOC_MOTOR_ACCELERATION = 1000;
+	private static final int LIGHTLOC_MOTOR_SPEED = 170;
+	private static final int LIGHTLOC_MOTOR_ACCELERATION = 1500;
 	private static final int RIGHT_ANGLE = 90;
 	public static boolean isLightLocalizing = false;
 	static ArrayList<Double> points = new ArrayList<Double>();
@@ -35,8 +36,12 @@ public class LightLocalizer {
 	double dx;
 
 	
-	public LightLocalizer() throws OdometerExceptions {
+	public LightLocalizer(SampleProvider left, SampleProvider right) throws OdometerExceptions {
 		odo = Odometer.getOdometer(Navigation.leftMotor, Navigation.rightMotor, Navigation.TRACK, Navigation.WHEEL_RAD);
+		leftSample = left;
+		rightSample = right;
+		newColorLeft = new float[leftSample.sampleSize()];
+		newColorRight = new float[rightSample.sampleSize()];
 	}
 
 	
@@ -64,6 +69,9 @@ public class LightLocalizer {
 		
 		//correct the odometer 
 		correctOdometer(startingCorner);
+		
+		double[] data = odo.getXYT();
+		Display.displayNavigation(data[0], data[1], data[2]);
 		
 		isLightLocalizing = false;
 		
@@ -118,23 +126,23 @@ public class LightLocalizer {
 
 		while(true) {
 			// Get color sensor readings
-			newColorLeft = LightController.colorLeft;
-			newColorRight = LightController.colorRight;
+			leftSample.fetchSample(newColorLeft, 0); // acquire data
+			rightSample.fetchSample(newColorRight, 0); 
 
 			// If line detected for left sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorLeft) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
+			if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
 				Navigation.leftMotor.stop(true);
 				foundLeft++;
 			}
 			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorRight) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
+			if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
 				Navigation.rightMotor.stop(true);
 				foundRight++;
 			}
 
 			// Store last color readings
-			oldSampleLeft = newColorLeft;
-			oldSampleRight = newColorRight;
+			oldSampleLeft = newColorLeft[0];
+			oldSampleRight = newColorRight[0];
 
 			// If line found for both sensors, exit
 			if(foundLeft == 1 && foundRight == 1) {
@@ -165,24 +173,24 @@ public class LightLocalizer {
 		Navigation.rightMotor.forward();
 
 		while(true) {
-			//color sensor and scaling
-			newColorLeft = LightController.colorLeft;
-			newColorRight = LightController.colorRight;
+			// Get color sensor readings
+			leftSample.fetchSample(newColorLeft, 0); // acquire data
+			rightSample.fetchSample(newColorRight, 0); 
 
 			// If line detected for left sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorLeft) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
+			if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
 				Navigation.leftMotor.stop(true);
 				foundLeft++;
 			}
 			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorRight) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
+			if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
 				Navigation.rightMotor.stop(true);
 				foundRight++;
 			}
 
 			// Store last color readings
-			oldSampleLeft = newColorLeft;
-			oldSampleRight = newColorRight;
+			oldSampleLeft = newColorLeft[0];
+			oldSampleRight = newColorRight[0];
 
 			// If line found for both sensors, exit
 			if(foundLeft == 1 && foundRight == 1) {

@@ -7,10 +7,6 @@ import ca.mcgill.ecse211.localizers.LightLocalizer;
 import ca.mcgill.ecse211.localizers.UltrasonicLocalizer;
 import ca.mcgill.ecse211.odometer.Odometer;
 import ca.mcgill.ecse211.odometer.OdometerExceptions;
-import ca.mcgill.ecse211.sensors.LightController;
-import ca.mcgill.ecse211.sensors.LightPoller;
-import ca.mcgill.ecse211.sensors.USController;
-import ca.mcgill.ecse211.sensors.UltrasonicPoller;
 import lejos.hardware.Button;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.lcd.TextLCD;
@@ -19,26 +15,43 @@ import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorModes;
 import lejos.robotics.SampleProvider;
 
+/*
+////////////////////////////////////
+/////////////// TODO ///////////////
+ * check if turnto method works properly, it might do 360 turns because the odometer is already off and it thinks its heading another direction
+ * add median filter for the light sensors
+ * able to receive values from wifi **
+ * running slowly, increase speed, if cant its because too much power on cpu
+ * turn off sensors when not needed i.e. ultrasonic (i.e. do we nullify the SampleProvider or what?
+ * watch out traveltowithcorrection also does a turn to
+ * can test out going diagonally to the side of the tunnel and then "localizing"
+////////////////////////////////////
+*/
+
+
 /**
  * @author JulienLesaffre
  * @author FouadBitar
+ * 
+ * This is the main execution class for the robot.
+ * 
+ * There are no polling classes that create threads so as to minimize the CPU load. The SampleProviders
+ * are initialized in the main and are sent to the classes that want to use it. This is so that we use same
+ * initialization.
  *
  */
 public class AutonomousRetrievalRobot {
 	
-
-	
 	static Odometer odometer = null;
 	static Navigation nav = null;
-	static USController usController;
-	static UltrasonicPoller usPoller;
 	static UltrasonicLocalizer usLocalizer;
-	static LightController lightController;
-	static LightPoller lightPoller;
 	static LightLocalizer lightLocalizer;
 	
 	private static final TextLCD lcd = LocalEV3.get().getTextLCD();
 
+	private static SampleProvider leftSampleProvider;
+	private static SampleProvider rightSampleProvider;
+	private static SampleProvider usSampleProvider;
 
 
 	/**
@@ -55,47 +68,41 @@ public class AutonomousRetrievalRobot {
 
 		Thread odoThread = new Thread(odometer);
 		odoThread.start();
-
-		nav = new Navigation(); 					//navigation must be after Odometer created
-		usController = new USController();
-		lightController = new LightController();
-		usLocalizer = new UltrasonicLocalizer();
-		lightLocalizer = new LightLocalizer();
 		
-		
-		//us poller 
-		SensorModes usSensor = new EV3UltrasonicSensor(LocalEV3.get().getPort("S1"));
-		SampleProvider usDistance = usSensor.getMode("Distance");                                           
-		usPoller = new UltrasonicPoller(usDistance, usController);			
-		
-		//light poller
+		//light samplers
 		SensorModes myColorLeft = new EV3ColorSensor(LocalEV3.get().getPort("S2"));
-		SampleProvider myColorSampleLeft = myColorLeft.getMode("Red");
+		leftSampleProvider = myColorLeft.getMode("Red");
 		SensorModes myColorRight = new EV3ColorSensor(LocalEV3.get().getPort("S3"));
-		SampleProvider myColorSampleRight = myColorRight.getMode("Red");
-		lightPoller = new LightPoller(myColorSampleLeft, myColorSampleRight, lightController);
+		rightSampleProvider = myColorRight.getMode("Red");
+		//us sampler 
+		SensorModes usSensor = new EV3UltrasonicSensor(LocalEV3.get().getPort("S1"));
+		usSampleProvider = usSensor.getMode("Distance");       
+
+		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer); 
+		
+		//localizers
+		usLocalizer = new UltrasonicLocalizer(usSampleProvider);
+		lightLocalizer = new LightLocalizer(leftSampleProvider, rightSampleProvider);
 		
 	}
 	
 
-	
-	/*
-	 * Writing main in specific methods so that
-	 * merging will not cause any issues
-	 */
-	public static void mainFouad() throws OdometerExceptions {
+	public static void main(String[] args) throws OdometerExceptions {
 		
 		Display.displayStartScreen(); 
 		
-		initialize(); 
+		initialize(); 	//initialize class variables needed
 		
-		usPoller.start();
-		usLocalizer.fallingEdge();
-		//stop the us poller
-		//start light poller and localize
-		lightPoller.start();
-		lightLocalizer.localize(Navigation.RedCorner); 
-
+		usLocalizer.fallingEdge();						//us localize
+		
+		lightLocalizer.localize(Navigation.RedCorner); 	//light localize
+		
+		Navigation.travelStartToTunnel();
+		
+		Navigation.setSpeedAcceleration(200, 1500);
+		Navigation.moveStraight(Navigation.SQUARE_SIZE/2, true, false);
+		Navigation.turnTo(0);
+		Navigation.moveStraight(Navigation.SQUARE_SIZE*3.5, true, false);
 		
 		
 		//start loop of execution
@@ -104,38 +111,5 @@ public class AutonomousRetrievalRobot {
 		
 	}
 
-	public static void main(String[] args) throws OdometerExceptions {
-		
-//		int buttonChoice;
-//
-//		do {
-//			// clear the display
-//			lcd.clear();
-//
-//			// ask the user whether the motor should drive in a square or float
-//			lcd.drawString("READY ?", 5, 3);
-//
-//
-//			buttonChoice = Button.waitForAnyPress(); // Record choice (left or right press)
-//		} while (buttonChoice != Button.ID_ENTER);
-//		
-//		if (buttonChoice == Button.ID_ENTER) {
-			
-//			initialize(); 
-			RingSet.testRingSet();
-			System.exit(0);
-
-
-			
-//		}
-
-		while (Button.waitForAnyPress() != Button.ID_ESCAPE);
-		System.exit(0);
-
-		
-
-		
-
-	}
 
 }

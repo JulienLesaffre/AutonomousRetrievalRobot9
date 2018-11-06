@@ -22,6 +22,7 @@ import lejos.robotics.SampleProvider;
  * running slowly, increase speed, if cant its because too much power on cpu
  * turn off sensors when not needed i.e. ultrasonic (i.e. do we nullify the SampleProvider or what?
  * watch out traveltowithcorrection also does a turn to
+ * can test out going diagonally to the side of the tunnel and then "localizing"
 ////////////////////////////////////
 */
 

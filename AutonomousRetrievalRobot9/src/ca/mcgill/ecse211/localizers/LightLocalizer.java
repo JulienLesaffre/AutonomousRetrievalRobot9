@@ -9,8 +9,7 @@ import ca.mcgill.ecse211.odometer.OdometerExceptions;
 import lejos.robotics.SampleProvider;
 
 /**
- * This class is used by main class to call localize method
- * to perform light localization.
+ * This class performs the light localization at start of game.
  *
  */
 public class LightLocalizer {
@@ -23,7 +22,6 @@ public class LightLocalizer {
 
 	private static SampleProvider leftSample;
 	private static SampleProvider rightSample;
-
 	private static Odometer odo;
 	private static final int LIGHTLOC_MOTOR_SPEED = 170;
 	private static final int LIGHTLOC_MOTOR_ACCELERATION = 1500;

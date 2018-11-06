@@ -52,7 +52,7 @@ public class Navigation {
 	private static Odometer odometer;
 	private static boolean isNavigating;
 
-	//EV3 sensor 
+	//EV3 objects
 	public static final EV3LargeRegulatedMotor leftMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
 	public static final EV3LargeRegulatedMotor rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
 	private static SampleProvider leftSampleProvider;
@@ -95,9 +95,9 @@ public class Navigation {
 	 */
 	public static void travelStartToTunnel() throws OdometerExceptions {
 
-		//calculate midpoint and tunnel orientation
+		//calculate start midpoint and tunnel orientation
 		findTunnelHeading();
-		double[] tunnelMidpoint = findTunnelMidpoint();
+		double[] tunnelMidpoint = findTunnelMidpoint(true);
 		
 		double myX = odometer.getXYT()[0];
 		double myY = odometer.getXYT()[1];
@@ -281,6 +281,18 @@ public class Navigation {
 		setSpeedAcceleration(TUNNEL_SPPED, TUNNEL_ACCEL);
 		moveStraight(SQUARE_SIZE * 3.6, true, false);
 	}
+	
+	
+	public static void travelTunnelToRingHolder() {
+		//calculate distance from robot position to ring holders
+		//	if enemy ringholder is closer, incorporate path to avoid both their ring holder and possible trajectory of enemy robot
+		//	if our ringholder is closer travel with best trajectory
+		
+		
+	}
+	
+	
+	
 	
 	
 	/**

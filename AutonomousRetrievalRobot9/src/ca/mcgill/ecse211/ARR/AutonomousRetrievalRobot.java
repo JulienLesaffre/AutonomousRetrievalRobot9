@@ -23,6 +23,14 @@ import lejos.robotics.SampleProvider;
  * turn off sensors when not needed i.e. ultrasonic (i.e. do we nullify the SampleProvider or what?
  * watch out traveltowithcorrection also does a turn to
  * can test out going diagonally to the side of the tunnel and then "localizing"
+ * 
+ * robot is placed in random orientation in corner, need to account for it starting at low edge
+ * have to wait once placed in corner for wifi to pass parameters
+ * beep 3 times after localizing
+ * go to ring set and once you get there issue 3 beeps
+ * when you detect the rings you issue beeps based on their number
+ * when you are done unloading you issue 5 beeps
+ * 
 ////////////////////////////////////
 */
 

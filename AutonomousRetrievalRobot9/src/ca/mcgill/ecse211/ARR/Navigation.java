@@ -29,10 +29,10 @@ public class Navigation {
 	public static final int[] BRR_UR = {2,5};
 	public static final int[] BRG_LL = {0,0}; 
 	public static final int[] BRG_UR = {0,0}; 
-	public static final int[] TR_LL = {0,0}; 
-	public static final int[] TR_UR = {0,0}; 
-	public static final int[] TG_LL = {0,0}; 
-	public static final int[] TG_UR = {0,0}; 
+	public static final int TR_x = -1;
+	public static final int TR_y = -1;
+	public static final int TG_x = -1; 
+	public static final int TG_y = -1;
 	
 	//Speed and acceleration
 	private static final int ROTATE_SPEED = 150;
@@ -42,11 +42,12 @@ public class Navigation {
 	private static final int TUNNEL_SPPED = 130;
 	private static final int TUNNEL_ACCEL = 1000;
 	
-	//Robot measurements
+	//distance measurements
 	public static final double WHEEL_RAD = 2.2;
 	public static final double TRACK = 12.85;
 	public static final double SQUARE_SIZE = 30.48;
 	public static final double SENSOR_OFFSET = 4.9;
+	public static final double AVOID_RING_SET_DISTANCE = 10.0;
 
 	//Association variables
 	private static Odometer odometer;
@@ -283,15 +284,221 @@ public class Navigation {
 	}
 	
 	
-	public static void travelTunnelToRingHolder() {
+	public static void travelTunnelToRingSet() throws OdometerExceptions {
 		//calculate distance from robot position to ring holders
 		//	if enemy ringholder is closer, incorporate path to avoid both their ring holder and possible trajectory of enemy robot
 		//	if our ringholder is closer travel with best trajectory
 		
 		
+		//two cases, left and right upon exit of tunnel
+		//upon exit of tunnel keeps going in same direction, so if tunnel vertical travels y first, then x, vice versa
+		//case left: the ring set relative to the robot position upon exiting the tunnel is to the left, go to bottom right 
+		//			 then start going around clockwise, first line dont detect, second line start detecting
+		//case right: the ring set relative to the robot position upon exiting is to the right, go to bottom left
+		//			 then start clockwise, first line dont detect, second line start
+		
+		String heading = getCurrentHeading();
+		double[] tunnelEndMidpoint = findTunnelMidpoint(false);
+		
+		if(isRingSetToLeft()) {
+			//get bottom right and bottom left corner tiles
+			double[] bottomRightTile = new double[2];
+			double[] bottomLeftTile = new double[2];;
+			double[] tiles = getClosestTiles(true);
+			bottomRightTile[0] = tiles[0];
+			bottomRightTile[1] = tiles[1];
+			bottomLeftTile[0] = tiles[2];
+			bottomLeftTile[1] = tiles[3];
+			
+			
+			//travel first in direction you are currently traveling in
+			//if traveling north/south, move to y of bottomRightTile
+			if(heading.equalsIgnoreCase("north") || heading.equalsIgnoreCase("south")) 
+				travelToWithCorrection(tunnelEndMidpoint[0], bottomRightTile[1]);
+			//if traveling east/west, move to x of bottomRightTile
+			else
+				travelToWithCorrection(bottomRightTile[0], tunnelEndMidpoint[1]);
+			
+			//now move other axis to reach bottomRightTile
+			travelToWithCorrection(bottomRightTile[0], bottomRightTile[1]);
+			
+			
+			//ring set should be to the north/east of the robot
+			//move to line in front, move forward offset amount, turn right, move to next line and ready for detection
+			turnToCoord(bottomLeftTile[0], bottomLeftTile[1]);
+			localizeLine();
+			moveStraight(AVOID_RING_SET_DISTANCE, true, false);
+			turnRobot(90, true, false);
+			localizeLine();
+			
+		} else {
+			//get bottom left and upper left corner tiles
+			double[] bottomLeftTile = new double[2];
+			double[] upperLeftTile = new double[2];;
+			double[] tiles = getClosestTiles(true);
+			bottomLeftTile[0] = tiles[0];
+			bottomLeftTile[1] = tiles[1];
+			upperLeftTile[0] = tiles[2];
+			upperLeftTile[1] = tiles[3];
+			
+			//travel first in direction you are currently traveling in
+			//if traveling north/south, move to y of bottomRightTile
+			if(heading.equalsIgnoreCase("north") || heading.equalsIgnoreCase("south")) 
+				travelToWithCorrection(tunnelEndMidpoint[0], bottomLeftTile[1]);
+			//if traveling east/west, move to x of bottomRightTile
+			else
+				travelToWithCorrection(bottomLeftTile[0], tunnelEndMidpoint[1]);
+			
+			//now move other axis to reach bottomRightTile
+			travelToWithCorrection(bottomLeftTile[0], bottomLeftTile[1]);
+			
+			
+			//ring set should be to the north/west of the robot
+			//move to line connecting bottom left to upper right, move forward offset amount, turn right, move to next line and ready for detection
+			turnToCoord(upperLeftTile[0], upperLeftTile[1]);
+			localizeLine();
+			moveStraight(AVOID_RING_SET_DISTANCE, true, false);
+			turnRobot(90, true, false);
+			localizeLine();
+		}
+		
 	}
 	
 	
+	//assumes we end on top of a line and color sensor is to right of robot facing the ring set
+	public static void detectRings() {
+		//it detects first one, turns around clockwise and does it again
+		//saves the information in the mean time i.e. height and color of ring detected
+	}
+	
+	
+	
+	@SuppressWarnings("unused")
+	public static double[] getClosestTiles(boolean ringSetIsLeft) {
+		String heading = getCurrentHeading();
+		double[] tileCoord = new double[4];
+		
+		//if we are red team use red team ring set, else green ring set
+		if(RedTeam == 9) { 	
+			tileCoord[0] = TR_x * SQUARE_SIZE;
+			tileCoord[1] = TR_y * SQUARE_SIZE;
+		} else {
+			tileCoord[0] = TG_x * SQUARE_SIZE;
+			tileCoord[1] = TG_y * SQUARE_SIZE;
+		}
+		
+		if(heading.equalsIgnoreCase("north")) { 						//heading north
+			if(ringSetIsLeft) {		// +x -y
+				tileCoord[0] +=  (SQUARE_SIZE/2);
+				tileCoord[1] -=  (SQUARE_SIZE/2);
+				tileCoord[2] -=  (SQUARE_SIZE/2);
+				tileCoord[3] -=  (SQUARE_SIZE/2);
+			} else {				// -x -y
+				tileCoord[0] -=  (SQUARE_SIZE/2);
+				tileCoord[1] -=  (SQUARE_SIZE/2);
+				tileCoord[2] -=  (SQUARE_SIZE/2);
+				tileCoord[3] +=  (SQUARE_SIZE/2);
+			}
+		} else if (heading.equalsIgnoreCase("east")) {					//heading east
+			if(ringSetIsLeft) {		// -x -y
+				tileCoord[0] -=  (SQUARE_SIZE/2);
+				tileCoord[1] -=  (SQUARE_SIZE/2);
+				tileCoord[2] -=  (SQUARE_SIZE/2);
+				tileCoord[3] +=  (SQUARE_SIZE/2);
+			} else {				// -x +y
+				tileCoord[0] -=  (SQUARE_SIZE/2);
+				tileCoord[1] +=  (SQUARE_SIZE/2);
+				tileCoord[2] +=  (SQUARE_SIZE/2);
+				tileCoord[3] +=  (SQUARE_SIZE/2);
+			}
+		} else if (heading.equalsIgnoreCase("south")) { 				//heading south
+			if(ringSetIsLeft) {		// -x +y
+				tileCoord[0] -=  (SQUARE_SIZE/2);
+				tileCoord[1] +=  (SQUARE_SIZE/2);
+				tileCoord[2] +=  (SQUARE_SIZE/2);
+				tileCoord[3] +=  (SQUARE_SIZE/2);
+			} else {				// +x +y
+				tileCoord[0] +=  (SQUARE_SIZE/2);
+				tileCoord[1] +=  (SQUARE_SIZE/2);
+				tileCoord[2] +=  (SQUARE_SIZE/2);
+				tileCoord[3] -=  (SQUARE_SIZE/2);
+			}
+		} else if (heading.equalsIgnoreCase("west")) { 					//heading west
+			if(ringSetIsLeft) {		// +x +y
+				tileCoord[0] +=  (SQUARE_SIZE/2);
+				tileCoord[1] +=  (SQUARE_SIZE/2);
+				tileCoord[2] +=  (SQUARE_SIZE/2);
+				tileCoord[3] -=  (SQUARE_SIZE/2);
+			} else {				// +x -y
+				tileCoord[0] +=  (SQUARE_SIZE/2);
+				tileCoord[1] -=  (SQUARE_SIZE/2);
+				tileCoord[2] -=  (SQUARE_SIZE/2);
+				tileCoord[3] -=  (SQUARE_SIZE/2);
+			}
+		}
+		return tileCoord;
+	}
+	
+	
+	@SuppressWarnings("unused")
+	public static boolean isRingSetToLeft() {
+		//get end tunnel end midpoint, current heading of robot, ringset coordinates
+		double[] tunnelEndMidpoint = new double[2];
+		double theta;
+		boolean isToLeft = false;
+		String heading = getCurrentHeading();
+		
+		tunnelEndMidpoint = findTunnelMidpoint(false);
+		theta = odometer.getXYT()[2];
+		int ringSetX, ringSetY;
+		
+		//if we are red team use red team ring set, else green ring set
+		if(RedTeam == 9) { 	
+			ringSetX = TR_x;
+			ringSetY = TR_y;
+		} else {
+			ringSetX = TG_x;
+			ringSetY = TG_y;
+		}
+		
+		//check if ringset is relatively to the left of robot
+		if(heading.equalsIgnoreCase("north")) { 						//heading north, if ringset x smaller than tunnel x it's left
+			if(ringSetX < ((int)tunnelEndMidpoint[0]/SQUARE_SIZE)) 
+				isToLeft = true;
+		} else if (heading.equalsIgnoreCase("east")) {					//heading east, if ringset y is larger than tunnel y it's left
+			if(ringSetY > ((int)tunnelEndMidpoint[1]/SQUARE_SIZE)) 
+				isToLeft = true;
+		} else if (heading.equalsIgnoreCase("south")) { 				//heading south, if ringset x is larger than tunnel x it's left
+			if(ringSetX > ((int)tunnelEndMidpoint[0]/SQUARE_SIZE)) 
+				isToLeft = true;
+		} else if (heading.equalsIgnoreCase("west")) { 					//heading west, if ringset y is smaller than tunnel y it's left
+			if(ringSetY < ((int)tunnelEndMidpoint[1]/SQUARE_SIZE)) 
+				isToLeft = true;
+		}
+		
+		return isToLeft;
+	}
+	
+	
+	/**
+	 * This method gets the current theta heading from the odometer and returns
+	 * the heading of the robot as a string.
+	 * @return : returns a String with either "north", "south", "east", "west"
+	 */
+	public static String getCurrentHeading() {
+		double theta = odometer.getXYT()[2];
+		String heading = "error";
+		if(theta < 45 && theta >= 0 || theta >= 315 && theta <= 360) { 	//heading north
+			heading = "north";
+		} else if (theta >= 45 && theta < 135) {						//heading east
+			heading = "east";
+		} else if (theta >= 135 && theta < 225) { 						//heading south
+			heading = "south";
+		} else if (theta >= 225 && theta < 315) { 						//heading west
+			heading = "west";
+		}
+		return heading;
+	}
 	
 	
 	
@@ -458,31 +665,31 @@ public class Navigation {
 	public static void correctOdometer() throws OdometerExceptions {
 		double[] data = new double[3];
 		data = odometer.getXYT();
-		int theta = (int)data[2];
 		double x = data[0], y = data[1];
+		String heading = getCurrentHeading();
 		//robot stopped with sensors on line, get x/y and adjust for offset, then round to nearest coordinate
-		if(theta < 20 && theta >= 0 || theta > 340 && theta <= 360) { 	//heading north correct y
+		if(heading.equalsIgnoreCase("north")) { 						//heading north correct y
 			y += SENSOR_OFFSET;
 			y = y/SQUARE_SIZE;
 			int yLine = (int) Math.round(y);
 			y = (yLine * SQUARE_SIZE) - SENSOR_OFFSET;
 			odometer.setY(y);
 			odometer.setTheta(0.0);
-		} else if (theta > 70 && theta < 110) {							//heading east correct x
+		} else if (heading.equalsIgnoreCase("east")) {					//heading east correct x
 			x += SENSOR_OFFSET;
 			x = x/SQUARE_SIZE;
 			int xLine = (int) Math.round(x);
 			x = (xLine * SQUARE_SIZE) - SENSOR_OFFSET;
 			odometer.setX(x);
 			odometer.setTheta(90.0);
-		} else if (theta > 160 && theta < 200) { 						//heading south correct y
+		} else if (heading.equalsIgnoreCase("south")) { 				//heading south correct y
 			y -= SENSOR_OFFSET;
 			y = y/SQUARE_SIZE;
 			int yLine = (int) Math.round(y);
 			y = (yLine * SQUARE_SIZE) + SENSOR_OFFSET;
 			odometer.setY(y);
 			odometer.setTheta(180.0);
-		} else if (theta > 250 && theta < 290) { 						//heading is west correct x
+		} else if (heading.equalsIgnoreCase("west")) { 					//heading is west correct x
 			x -= SENSOR_OFFSET;
 			x = x/SQUARE_SIZE;
 			int xLine = (int) Math.round(x);
@@ -689,6 +896,16 @@ public class Navigation {
 			leftMotor.rotate(convertAngle( dTheta), true);
 			rightMotor.rotate(-convertAngle( dTheta), false);
 		}
+	}
+	
+	public static void turnToCoord(double x, double y) {
+		double x0 = odometer.getXYT()[0];
+		double y0 = odometer.getXYT()[1];
+		double theta0 = odometer.getXYT()[2];
+		double xVector = x - x0;
+		double yVector = y - y0;
+		double thetaVector = Math.toDegrees(Math.atan2(xVector, yVector));
+		turnTo(thetaVector - theta0);
 	}
 	
 

@@ -50,7 +50,7 @@ public class RingSet {
 	 */
 	public static void pickUpRing() {
 		ringPickUpMotor.setSpeed(100);
-		ringPickUpMotor.rotate(146);
+		ringPickUpMotor.rotate(90);
 		ringPickUpMotor.stop();
 		Navigation.leftMotor.setSpeed(100);
 		Navigation.rightMotor.setSpeed(100);
@@ -58,7 +58,7 @@ public class RingSet {
 		Navigation.rightMotor.rotate(200, false);
 		Navigation.leftMotor.rotate(-200, true);
 		Navigation.rightMotor.rotate(-200, false);
-		ringPickUpMotor.rotate(-100);
+		ringPickUpMotor.rotate(-80);
 
 	}
 	
@@ -80,7 +80,6 @@ public class RingSet {
 	}
 
 	public static void ringSetMain() {
-		// out of the tunnel, it should be nice if the robot could localize again.
 		double x = odometer.getXYT()[0];
 		double y = odometer.getXYT()[1];
 		Navigation.travelTo(findClosestTileCenter(x, y)[0], findClosestTileCenter(x, y)[1]);

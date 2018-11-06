@@ -112,8 +112,8 @@ public class AutonomousRetrievalRobot {
 			// clear the display
 			lcd.clear();
 
-			// ask the user whether the motors should drive in a square or float
-			lcd.drawString("	READY ?", 0, 4);
+			// ask the user whether the motor should drive in a square or float
+			lcd.drawString("READY ?", 2, 3);
 
 
 			buttonChoice = Button.waitForAnyPress(); // Record choice (left or right press)

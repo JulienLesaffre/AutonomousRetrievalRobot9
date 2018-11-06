@@ -47,7 +47,7 @@ public class AutonomousRetrievalRobot {
 	static UltrasonicLocalizer usLocalizer;
 	static LightLocalizer lightLocalizer;
 	
-	private static final TextLCD lcd = LocalEV3.get().getTextLCD();
+	public static final TextLCD lcd = LocalEV3.get().getTextLCD();
 
 	private static SampleProvider leftSampleProvider;
 	private static SampleProvider rightSampleProvider;

@@ -2,6 +2,7 @@ package ca.mcgill.ecse211.ARR;
 
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
+import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.motor.NXTRegulatedMotor;
 import ca.mcgill.ecse211.odometer.*;
 
@@ -14,10 +15,11 @@ public class RingSet {
 
 	private static Odometer odometer;
 
-	public static final EV3LargeRegulatedMotor leftMotor = Navigation.leftMotor;
-	public static final EV3LargeRegulatedMotor rightMotor = Navigation.rightMotor;
-	public static final NXTRegulatedMotor ringPickUpMotor = new NXTRegulatedMotor(
+	private static final EV3LargeRegulatedMotor leftMotor = Navigation.leftMotor;
+	private static final EV3LargeRegulatedMotor rightMotor = Navigation.rightMotor;
+	private static final NXTRegulatedMotor ringPickUpMotor = new NXTRegulatedMotor(
 			LocalEV3.get().getPort("C"));
+	private static final EV3MediumRegulatedMotor lightSensorMotor = new EV3MediumRegulatedMotor(LocalEV3.get().getPort("B"));
 	
 
 	public RingSet() throws OdometerExceptions {
@@ -47,13 +49,13 @@ public class RingSet {
 		ringPickUpMotor.rotate(-1,false);
 		ringPickUpMotor.rotate(55);
 		ringPickUpMotor.stop();
-		Navigation.leftMotor.setSpeed(100);
-		Navigation.rightMotor.setSpeed(100);
-		Navigation.leftMotor.rotate(280, true);
-		Navigation.rightMotor.rotate(280, false);
+		leftMotor.setSpeed(100);
+		rightMotor.setSpeed(100);
+		leftMotor.rotate(280, true);
+		rightMotor.rotate(280, false);
 		ringPickUpMotor.rotate(-10,false);
-		Navigation.leftMotor.rotate(-200, true);
-		Navigation.rightMotor.rotate(-200, false);
+		leftMotor.rotate(-200, true);
+		rightMotor.rotate(-200, false);
 		ringPickUpMotor.rotate(-50);
 		ringPickUpMotor.stop();
 	}
@@ -77,6 +79,12 @@ public class RingSet {
 	 * Detect the rings and their color
 	 */
 	private static void detectRings() {
+		while (true) {	
+			int colorDetected = RingDetection.colorDetection();
+			String colorDetectedString = Integer.toString(colorDetected);
+			AutonomousRetrievalRobot.lcd.drawString(colorDetectedString, 0, 0);
+		}
+		
 
 	}
 
@@ -103,7 +111,7 @@ public class RingSet {
 	
 
 	public static void testRingSet() {
-	//	pickUpRing();
+		pickUpRing();
 		dropRings();
 
 		

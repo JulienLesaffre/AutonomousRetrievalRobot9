@@ -3,6 +3,7 @@ package ca.mcgill.ecse211.ARR;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
+import lejos.hardware.motor.NXTRegulatedMotor;
 import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorModes;
@@ -21,9 +22,9 @@ public class RingSet {
 
 	public static final EV3LargeRegulatedMotor leftMotor = Navigation.leftMotor;
 	public static final EV3LargeRegulatedMotor rightMotor = Navigation.rightMotor;
-	public static final EV3MediumRegulatedMotor ringPickUpMotor = new EV3MediumRegulatedMotor(
+	public static final NXTRegulatedMotor ringPickUpMotor = new NXTRegulatedMotor(
 			LocalEV3.get().getPort("C"));
-	private static int distance = USController.distance;
+	
 
 	public RingSet() throws OdometerExceptions {
 		RingSet.odometer = Odometer.getOdometer();
@@ -48,12 +49,20 @@ public class RingSet {
 	 * Handles the picking up of a ring
 	 */
 	public static void pickUpRing() {
-		while (distance > 20) { // distance to change after testing
-			Navigation.moveStraight(20, true, true);
-		}
-		Navigation.stopMotors();
-		ringPickUpMotor.rotate(180); //angle to change after testing
+		ringPickUpMotor.setSpeed(100);
+		ringPickUpMotor.rotate(146);
+		ringPickUpMotor.stop();
+		Navigation.leftMotor.setSpeed(100);
+		Navigation.rightMotor.setSpeed(100);
+		Navigation.leftMotor.rotate(200, true);
+		Navigation.rightMotor.rotate(200, false);
+		Navigation.leftMotor.rotate(-200, true);
+		Navigation.rightMotor.rotate(-200, false);
+		ringPickUpMotor.rotate(-100);
+
 	}
+	
+	
 
 	/**
 	 * Detect the rings and their color
@@ -87,6 +96,7 @@ public class RingSet {
 
 	public static void testRingSet() {
 		pickUpRing();
+
 		
 	}
 	

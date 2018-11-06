@@ -288,8 +288,10 @@ public class Navigation {
 	public static void moveStraight(double distance, boolean forwards, boolean continueRunning) {
 		int i = 1;
 		if (!forwards) i = -1;
-		leftMotor.rotate(convertDistance(i * distance), true);
-		rightMotor.rotate(convertDistance(i * distance), continueRunning);
+		leftMotor.setSpeed(ROTATE_SPEED);
+		rightMotor.setSpeed(ROTATE_SPEED);
+		leftMotor.rotate(convertDistance(distance), true);
+		rightMotor.rotate(convertDistance(distance), continueRunning);
 	}
 
 	/**

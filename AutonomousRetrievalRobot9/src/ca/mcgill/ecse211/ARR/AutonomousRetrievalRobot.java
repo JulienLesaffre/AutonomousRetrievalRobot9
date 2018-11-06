@@ -11,7 +11,9 @@ import ca.mcgill.ecse211.sensors.LightController;
 import ca.mcgill.ecse211.sensors.LightPoller;
 import ca.mcgill.ecse211.sensors.USController;
 import ca.mcgill.ecse211.sensors.UltrasonicPoller;
+import lejos.hardware.Button;
 import lejos.hardware.ev3.LocalEV3;
+import lejos.hardware.lcd.TextLCD;
 import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorModes;
@@ -34,7 +36,9 @@ public class AutonomousRetrievalRobot {
 	static LightController lightController;
 	static LightPoller lightPoller;
 	static LightLocalizer lightLocalizer;
-	static Testing test;
+	
+	private static final TextLCD lcd = LocalEV3.get().getTextLCD();
+
 
 
 	/**
@@ -101,9 +105,33 @@ public class AutonomousRetrievalRobot {
 	}
 
 	public static void main(String[] args) throws OdometerExceptions {
-		initialize(); 
-		Thread testThread = new Thread(test);
-		testThread.start();
+		
+		int buttonChoice;
+
+		do {
+			// clear the display
+			lcd.clear();
+
+			// ask the user whether the motors should drive in a square or float
+			lcd.drawString("	READY ?", 0, 4);
+
+
+			buttonChoice = Button.waitForAnyPress(); // Record choice (left or right press)
+		} while (buttonChoice != Button.ID_ENTER);
+		
+		if (buttonChoice == Button.ID_ENTER) {
+			
+//			initialize(); 
+			RingSet.testRingSet();
+
+
+
+			
+		}
+
+		while (Button.waitForAnyPress() != Button.ID_ESCAPE);
+		System.exit(0);
+
 		
 
 		

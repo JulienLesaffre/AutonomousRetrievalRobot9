@@ -1,5 +1,6 @@
 package ca.mcgill.ecse211.ARR;
 
+import lejos.hardware.Sound;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
@@ -20,31 +21,21 @@ public class RingSet {
 	private static final NXTRegulatedMotor ringPickUpMotor = new NXTRegulatedMotor(
 			LocalEV3.get().getPort("C"));
 	private static final EV3MediumRegulatedMotor lightSensorMotor = new EV3MediumRegulatedMotor(LocalEV3.get().getPort("B"));
+	private static final int[] RS_LL = {0,0}; //RingSet Lower Left coordinates {x,y}
+	private static final int[] RS_UR = {0,0}; //RingSet Upper Right coordinates {x,y}
 	
-
 	public RingSet() throws OdometerExceptions {
 		RingSet.odometer = Odometer.getOdometer();
 
 	}
 
-	/**
-	 * 
-	 * @param x:
-	 *            x position of robot
-	 * @param y:
-	 *            y position of robot
-	 * @return: return the coordinates of the center of the closest Tile adjacent to
-	 *          the ring set from the robot
-	 */
-	private static double[] findClosestTileCenter(double x, double y) {
-		double[] xy = { x, y };
-		return xy;
-	}
 
 	/**
-	 * Handles the picking up of a ring
+	 * 
+	 * @param ringColor
+	 * @param topLevel
 	 */
-	public static void pickUpRing() {
+	public static void pickUpRing(int ringColor, boolean topLevel) {
 		ringPickUpMotor.setSpeed(80);
 		ringPickUpMotor.rotate(-1,false);
 		ringPickUpMotor.rotate(55);
@@ -63,7 +54,6 @@ public class RingSet {
 	public static void dropRings() {
 		Navigation.leftMotor.setSpeed(100);
 		Navigation.rightMotor.setSpeed(100);
-		ringPickUpMotor.setSpeed(200);
 		ringPickUpMotor.rotate(85);
 		Navigation.leftMotor.rotate(-400, true);
 		Navigation.rightMotor.rotate(-400, true);
@@ -79,8 +69,45 @@ public class RingSet {
 	 * Detect the rings and their color
 	 */
 	private static void detectRings() {
-		while (true) {	
-			int colorDetected = RingDetection.colorDetection();
+		int distanceToTravel = 10;
+		Navigation.moveStraight(distanceToTravel, true, true);
+		double xStart = odometer.getXYT()[0];
+		double yStart = odometer.getXYT()[1];
+		double xEnd = odometer.getXYT()[0];
+		double yEnd = odometer.getXYT()[1];
+		int colorDetected;
+		boolean ringDetected = false;
+		while ((Math.abs(xStart-xEnd) < distanceToTravel) || (Math.abs(yStart-yEnd) < distanceToTravel) || ringDetected ) {
+			xEnd = odometer.getXYT()[0];
+			yEnd = odometer.getXYT()[1];
+			colorDetected = RingDetection.colorDetection();
+			switch (colorDetected) {
+				case 1:
+					Sound.beep();
+					ringDetected = true;
+					break;
+				case 2:
+					Sound.beep();
+					Sound.beep();
+					ringDetected = true;
+					break;
+				case 3:
+					Sound.beep();
+					Sound.beep();
+					Sound.beep();
+					ringDetected = true;
+					break;
+				case 4:
+					Sound.beep();
+					Sound.beep();
+					Sound.beep();
+					Sound.beep();
+					ringDetected = true;
+					break;
+				default:
+					break;
+			}
+				
 			String colorDetectedString = Integer.toString(colorDetected);
 			AutonomousRetrievalRobot.lcd.drawString(colorDetectedString, 0, 0);
 		}
@@ -88,32 +115,22 @@ public class RingSet {
 
 	}
 
-	/**
-	 * The robot moves to the center of the next tile adjacent to the ring set in
-	 * order to be ready to detect a ring on a new side of the ring set
-	 */
-	private static void changeSide() {
 
-	}
-
-	public static void ringSetMain() {
-		double x = odometer.getXYT()[0];
-		double y = odometer.getXYT()[1];
-		Navigation.travelTo(findClosestTileCenter(x, y)[0], findClosestTileCenter(x, y)[1]);
+	public static void ringSetMain() throws OdometerExceptions {
+		
 		// at this point, the robot should be at the center of a Tile adjacent to the
 		// ring set.
 		for (int i = 0; i <= 3; i++) {
 			detectRings();
-			changeSide();
+			Navigation.turnTo(90);
 		}
-		// navigate to enter of tunnel
+
 	}
 	
 
 	public static void testRingSet() {
-		pickUpRing();
+		pickUpRing(1,true);
 		dropRings();
-
 		
 	}
 	

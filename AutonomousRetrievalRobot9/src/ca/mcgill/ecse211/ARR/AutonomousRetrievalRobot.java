@@ -89,24 +89,25 @@ public class AutonomousRetrievalRobot {
 
 	public static void main(String[] args) throws OdometerExceptions {
 		
-		Display.displayStartScreen(); 
-		
-		initialize(); 	//initialize class variables needed
-		
-		usLocalizer.fallingEdge();						//us localize
-		
-		lightLocalizer.localize(Navigation.RedCorner); 	//light localize
-		
-		Navigation.travelStartToTunnel();
-		
-		Navigation.setSpeedAcceleration(200, 1500);
-		Navigation.moveStraight(Navigation.SQUARE_SIZE/2, true, false);
-		Navigation.turnTo(0);
-		Navigation.moveStraight(Navigation.SQUARE_SIZE*3.5, true, false);
-		
-		
-		//start loop of execution
-		// 1) 
+//		Display.displayStartScreen(); 
+//		
+//		initialize(); 	//initialize class variables needed
+//		
+//		usLocalizer.fallingEdge();						//us localize
+//		
+//		lightLocalizer.localize(Navigation.RedCorner); 	//light localize
+//		
+//		Navigation.travelStartToTunnel();
+//		
+//		Navigation.setSpeedAcceleration(200, 1500);
+//		Navigation.moveStraight(Navigation.SQUARE_SIZE/2, true, false);
+//		Navigation.turnTo(0);
+//		Navigation.moveStraight(Navigation.SQUARE_SIZE*3.5, true, false);
+//		
+//		
+//		//start loop of execution
+//		// 1) 
+		RingSet.testRingSet();
 		
 		
 	}

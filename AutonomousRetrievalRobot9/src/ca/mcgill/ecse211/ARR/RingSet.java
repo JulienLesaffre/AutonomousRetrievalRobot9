@@ -38,16 +38,16 @@ public class RingSet {
 	public static void pickUpRing(int ringColor, boolean topLevel) {
 		ringPickUpMotor.setSpeed(80);
 		ringPickUpMotor.rotate(-1,false);
-		ringPickUpMotor.rotate(55);
+		ringPickUpMotor.rotate(92);
 		ringPickUpMotor.stop();
-		leftMotor.setSpeed(100);
-		rightMotor.setSpeed(100);
-		leftMotor.rotate(280, true);
-		rightMotor.rotate(280, false);
+		Navigation.leftMotor.setSpeed(100);
+		Navigation.rightMotor.setSpeed(100);
+		Navigation.leftMotor.rotate(250, true);
+		Navigation.rightMotor.rotate(250, false);
 		ringPickUpMotor.rotate(-10,false);
-		leftMotor.rotate(-200, true);
-		rightMotor.rotate(-200, false);
-		ringPickUpMotor.rotate(-50);
+		Navigation.leftMotor.rotate(-200, true);
+		Navigation.rightMotor.rotate(-200, false);
+		ringPickUpMotor.rotate(-80);
 		ringPickUpMotor.stop();
 	}
 	
@@ -77,7 +77,7 @@ public class RingSet {
 		double yEnd = odometer.getXYT()[1];
 		int colorDetected;
 		boolean ringDetected = false;
-		while ((Math.abs(xStart-xEnd) < distanceToTravel) || (Math.abs(yStart-yEnd) < distanceToTravel) || ringDetected ) {
+		while ((Math.abs(xStart-xEnd) < distanceToTravel) || (Math.abs(yStart-yEnd) < distanceToTravel) || !ringDetected ) {
 			xEnd = odometer.getXYT()[0];
 			yEnd = odometer.getXYT()[1];
 			colorDetected = RingDetection.colorDetection();
@@ -116,10 +116,7 @@ public class RingSet {
 	}
 
 
-	public static void ringSetMain() throws OdometerExceptions {
-		
-		// at this point, the robot should be at the center of a Tile adjacent to the
-		// ring set.
+	public static void ringSetMain() {
 		for (int i = 0; i <= 3; i++) {
 			detectRings();
 			Navigation.turnTo(90);
@@ -130,8 +127,8 @@ public class RingSet {
 
 	public static void testRingSet() {
 		pickUpRing(1,true);
-		dropRings();
-		
+//		dropRings();
+//		ringSetMain();
 	}
 	
 

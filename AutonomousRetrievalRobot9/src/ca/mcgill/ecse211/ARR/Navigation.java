@@ -989,8 +989,8 @@ public class Navigation {
 	
 	/**
 	 * This method sets the speed and acceleration of the robot
-	 * @param speed
-	 * @param acceleration
+	 * @param speed The speed to set both the motors
+	 * @param acceleration The acceleration to set both motors
 	 */
 	public static void setSpeedAcceleration(int speed, int acceleration) {
 		leftMotor.setAcceleration(acceleration);
@@ -1026,6 +1026,5 @@ public class Navigation {
 	public boolean isNavigating() {
 		return isNavigating;
 	}
-	
 
 }

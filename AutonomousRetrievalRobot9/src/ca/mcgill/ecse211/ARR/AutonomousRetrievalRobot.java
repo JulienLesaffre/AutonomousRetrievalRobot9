@@ -46,15 +46,11 @@ import lejos.hardware.Button;
 
 
 /**
+ * This is the main execution class for the robot.
+ * 
  * @author JulienLesaffre
  * @author FouadBitar
  * 
- * This is the main execution class for the robot.
- * 
- * There are no polling classes that create threads so as to minimize the CPU load. The SampleProviders
- * are initialized in the main and are sent to the classes that want to use it. This is so that we use same
- * initialization.
- *
  */
 public class AutonomousRetrievalRobot {
 	
@@ -88,7 +84,6 @@ public class AutonomousRetrievalRobot {
 	 * 
 	 * @throws OdometerExceptions
 	 */
-	@SuppressWarnings("resource")
 	private static void initialize() throws OdometerExceptions{
 		
 		//connect/intialize sensors and motors
@@ -102,7 +97,7 @@ public class AutonomousRetrievalRobot {
 		rightSampleProvider = myColorRight.getMode("Red");
 		SensorModes usSensor = new EV3UltrasonicSensor(LocalEV3.get().getPort("S1"));
 		usSampleProvider = usSensor.getMode("Distance");
-
+		
 		
 		
 		//start odometer
@@ -120,6 +115,11 @@ public class AutonomousRetrievalRobot {
 	}
 	
 	@SuppressWarnings("rawtypes")
+	/**
+	 * This method connects to the server specified by the IP address variable and waits for 
+	 * the server to pass the game parameters for the round. It extracts the data and places
+	 * the data in the correct variable in the Navigation class.
+	 */
 	private static void retrieveDataFromServer() {
 		
 		// Initialize WifiConnection class
@@ -183,6 +183,7 @@ public class AutonomousRetrievalRobot {
 		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		
 		usLocalizer.fallingEdge();						//us localize
+		
 		
 		lightLocalizer.localize(); 						//light localize
 		

@@ -1,11 +1,10 @@
 package ca.mcgill.ecse211.localizers;
 
-import java.util.ArrayList;
-
 import ca.mcgill.ecse211.ARR.Display;
 import ca.mcgill.ecse211.ARR.Navigation;
 import ca.mcgill.ecse211.odometer.Odometer;
 import ca.mcgill.ecse211.odometer.OdometerExceptions;
+import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.robotics.SampleProvider;
 
 /**
@@ -14,34 +13,48 @@ import lejos.robotics.SampleProvider;
  */
 public class LightLocalizer {
 
-	// Instantiate Color sensor and other variables
+	//sensor variables
 	static float[] newColorLeft;
 	static float oldSampleLeft;
 	static float[] newColorRight;
 	static float oldSampleRight;
 
+	//sensors and motors
 	private static SampleProvider leftSample;
 	private static SampleProvider rightSample;
-	private static Odometer odo;
+	private static EV3LargeRegulatedMotor rightMotor;
+	private static EV3LargeRegulatedMotor leftMotor;
+	
+	//constants
 	private static final int LIGHTLOC_MOTOR_SPEED = 170;
 	private static final int LIGHTLOC_MOTOR_ACCELERATION = 1500;
 	private static final int RIGHT_ANGLE = 90;
-	public static boolean isLightLocalizing = false;
-	static ArrayList<Double> points = new ArrayList<Double>();
-	double[] oldResult = new double [3];
-	static int passedLine;
-	static double xOffset = 0;
-	static double yOffset = 0;
-	double dy;
-	double dx;
-
 	
-	public LightLocalizer(SampleProvider left, SampleProvider right) throws OdometerExceptions {
-		odo = Odometer.getOdometer(Navigation.leftMotor, Navigation.rightMotor, Navigation.TRACK, Navigation.WHEEL_RAD);
+	//associations
+	private static Odometer odo;
+	
+	
+	public static boolean isLightLocalizing = false;
+
+
+	/**
+	 * Class constructor
+	 * @param left Left light sensor sample provider
+	 * @param right Right light sensor sample provider
+	 * @param odometer Odometer updating the position of the robot
+	 * @param lMotor Left motor instance
+	 * @param rMotor Right motor instance
+	 * @throws OdometerExceptions
+	 */
+	public LightLocalizer(SampleProvider left, SampleProvider right, Odometer odometer, EV3LargeRegulatedMotor lMotor,
+			EV3LargeRegulatedMotor rMotor) throws OdometerExceptions {
+		odo = odometer;
 		leftSample = left;
 		rightSample = right;
 		newColorLeft = new float[leftSample.sampleSize()];
 		newColorRight = new float[rightSample.sampleSize()];
+		leftMotor = lMotor;
+		rightMotor = rMotor;
 	}
 
 	
@@ -55,7 +68,7 @@ public class LightLocalizer {
 	 * @param startingCorner : starting corner of robot, main must pass this in
 	 * @throws OdometerExceptions
 	 */
-	public void localize(int startingCorner) throws OdometerExceptions {
+	public void localize() throws OdometerExceptions {
 		
 		isLightLocalizing = true;
 		
@@ -67,8 +80,13 @@ public class LightLocalizer {
 		// Move to the line to the right 
 		findRightLine();
 		
-		//correct the odometer 
-		correctOdometer(startingCorner);
+		//correct the odometer based on starting corner
+		if(Navigation.GreenTeam == 9) {
+			correctOdometer(Navigation.GreenTeam);
+		} else {
+			correctOdometer(Navigation.RedTeam);
+		}
+		
 		
 		double[] data = odo.getXYT();
 		Display.displayNavigation(data[0], data[1], data[2]);
@@ -83,7 +101,7 @@ public class LightLocalizer {
 	 * by going forward to first line then right to second line. Using this 
 	 * information and the size of the field we can correct the odometer readings.
 	 * 
-	 * @param startingCorner
+	 * @param startingCorner The starting corner of the robot from 0-3
 	 */
 	private void correctOdometer(int startingCorner) {
 		//Correct the odometer depending on the starting corner
@@ -121,8 +139,8 @@ public class LightLocalizer {
 		int foundLeft = 0;
 		int foundRight = 0;
 
-		Navigation.leftMotor.forward();
-		Navigation.rightMotor.forward();
+		leftMotor.forward();
+		rightMotor.forward();
 
 		while(true) {
 			// Get color sensor readings
@@ -131,12 +149,12 @@ public class LightLocalizer {
 
 			// If line detected for left sensor (intensity less than 0.3), only count once by keeping track of last value
 			if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
-				Navigation.leftMotor.stop(true);
+				leftMotor.stop(true);
 				foundLeft++;
 			}
 			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
 			if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
-				Navigation.rightMotor.stop(true);
+				rightMotor.stop(true);
 				foundRight++;
 			}
 
@@ -169,8 +187,8 @@ public class LightLocalizer {
 		int foundRight = 0;
 
 
-		Navigation.leftMotor.forward();
-		Navigation.rightMotor.forward();
+		leftMotor.forward();
+		rightMotor.forward();
 
 		while(true) {
 			// Get color sensor readings
@@ -179,12 +197,12 @@ public class LightLocalizer {
 
 			// If line detected for left sensor (intensity less than 0.3), only count once by keeping track of last value
 			if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
-				Navigation.leftMotor.stop(true);
+				leftMotor.stop(true);
 				foundLeft++;
 			}
 			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
 			if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
-				Navigation.rightMotor.stop(true);
+				rightMotor.stop(true);
 				foundRight++;
 			}
 

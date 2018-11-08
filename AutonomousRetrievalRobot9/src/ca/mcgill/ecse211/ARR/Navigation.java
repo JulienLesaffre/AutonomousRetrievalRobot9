@@ -1,12 +1,9 @@
 package ca.mcgill.ecse211.ARR;
 
-import lejos.hardware.ev3.LocalEV3;
+import ca.mcgill.ecse211.odometer.*;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.robotics.SampleProvider;
-
 import java.util.ArrayList;
-
-import ca.mcgill.ecse211.odometer.*;
 
 
 /**
@@ -16,7 +13,7 @@ import ca.mcgill.ecse211.odometer.*;
 public class Navigation {
 
 	//Game parameters
-	public static int RedTeam = -1; 		
+	public static int RedTeam = 9; 		
 	public static int GreenTeam = -1; 
 	public static int RedCorner = -1; 
 	public static int GreenCorner = -1;
@@ -32,19 +29,18 @@ public class Navigation {
 	public static int Island_LL_y = -1;
 	public static int Island_UR_x = -1;
 	public static int Island_UR_y = -1;
-	public static int TNR_LL_x = -1;
-	public static int TNR_LL_y = -1;
-	public static int TNR_UR_x = -1;
-	public static int TNR_UR_y = -1;
+	public static int TNR_LL_x = 3;
+	public static int TNR_LL_y = 3;
+	public static int TNR_UR_x = 4;
+	public static int TNR_UR_y = 5;
 	public static int TNG_LL_x = -1;
 	public static int TNG_LL_y = -1;
 	public static int TNG_UR_x = -1;
 	public static int TNG_UR_y = -1;
-	public static int TR_x = -1;
-	public static int TR_y = -1;
+	public static int TR_x = 6;
+	public static int TR_y = 7;
 	public static int TG_x = -1;
 	public static int TG_y = -1;
-	
 	
 	//Speed and acceleration
 	private static final int ROTATE_SPEED = 150;
@@ -66,8 +62,8 @@ public class Navigation {
 	private static boolean isNavigating;
 
 	//EV3 objects
-	public static final EV3LargeRegulatedMotor leftMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
-	public static final EV3LargeRegulatedMotor rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
+	private static EV3LargeRegulatedMotor leftMotor;
+	private static EV3LargeRegulatedMotor rightMotor;
 	private static SampleProvider leftSampleProvider;
 	private static SampleProvider rightSampleProvider;
 	
@@ -82,10 +78,13 @@ public class Navigation {
 	 * @param odo : takes in odometer, instead of calling Odometer to get, this ensures odometer instantiated first
 	 * @throws OdometerExceptions
 	 */
-	public Navigation(SampleProvider leftLight, SampleProvider rightLight, Odometer odo) throws OdometerExceptions {
+	public Navigation(SampleProvider leftLight, SampleProvider rightLight, Odometer odo, 
+			EV3LargeRegulatedMotor lMotor,EV3LargeRegulatedMotor rMotor) throws OdometerExceptions {
 		odometer = odo;
 		leftSampleProvider = leftLight;
 		rightSampleProvider = rightLight;
+		leftMotor = lMotor;
+		rightMotor = rMotor;
 	}
 	
 	
@@ -607,6 +606,7 @@ public class Navigation {
 				}
 				//perform correction of odometer here when sensors are on top of lines
 				correctOdometer();
+				moveStraight(SENSOR_OFFSET, true, false);
 				
 				
 				//display the corrected values 
@@ -682,7 +682,7 @@ public class Navigation {
 		double xf = odometer[0];
 		double yf = odometer[1];
 		double cErr = Math.hypot(xf - xd, yf - yd);
-		return cErr < 4;
+		return cErr < 7;
 	}
 	
 	

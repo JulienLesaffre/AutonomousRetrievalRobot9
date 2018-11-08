@@ -13,16 +13,9 @@ public class Display {
 
 	public static final TextLCD lcd = LocalEV3.get().getTextLCD();
 
-	/**
-	 * This is the class constructor
-	 * 
-	 */
-	public Display() {
-	}
 
 	/**
-	 * this method asks user to start
-	 * must press right button to start then clears display and executes prog
+	 * Asks the user to start, must press right button to start then clears display and executes prog
 	 */
 	public static void displayStartScreen() {
 		lcd.clear();
@@ -67,6 +60,12 @@ public class Display {
 		lcd.drawString("theta: " + theta, 0, 5);
 	}
 	
+	/**
+	 * Displays odometer values on lcd screen.
+	 * @param x : 
+	 * @param y
+	 * @param theta
+	 */
 	public static void displayNavigation(double x, double y, double theta) {
 		lcd.clear();
 		lcd.drawString("x: " + x, 0, 0);

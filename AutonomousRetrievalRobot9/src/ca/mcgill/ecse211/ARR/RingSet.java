@@ -38,19 +38,23 @@ public class RingSet {
 	public static void pickUpRing(int ringColor, boolean topLevel) {
 		ringPickUpMotor.setSpeed(80);
 		ringPickUpMotor.rotate(-1,false);
-		ringPickUpMotor.rotate(92);
+		ringPickUpMotor.rotate(55);
 		ringPickUpMotor.stop();
 		Navigation.leftMotor.setSpeed(100);
 		Navigation.rightMotor.setSpeed(100);
-		Navigation.leftMotor.rotate(250, true);
-		Navigation.rightMotor.rotate(250, false);
+		Navigation.leftMotor.rotate(280, true);
+		Navigation.rightMotor.rotate(280, true);
+		ringPickUpMotor.setSpeed(80);
 		ringPickUpMotor.rotate(-10,false);
 		Navigation.leftMotor.rotate(-200, true);
 		Navigation.rightMotor.rotate(-200, false);
-		ringPickUpMotor.rotate(-80);
+		ringPickUpMotor.rotate(-50);
 		ringPickUpMotor.stop();
 	}
 	
+	/**
+	 * drop the rings stored on the claw
+	 */
 	public static void dropRings() {
 		Navigation.leftMotor.setSpeed(100);
 		Navigation.rightMotor.setSpeed(100);
@@ -127,8 +131,7 @@ public class RingSet {
 
 	public static void testRingSet() {
 		pickUpRing(1,true);
-//		dropRings();
-//		ringSetMain();
+
 	}
 	
 

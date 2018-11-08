@@ -22,6 +22,13 @@ public class RingDetection {
 		colorSample.fetchSample(rgbValues, 0);
 	}
 
+	/**
+	 * 
+	 * @param rgb:
+	 *            rgb values detected by the light sensor
+	 * @return: returns the integer corresponding to the color detected (1: blue, 2:
+	 *          green, 3: yellow, 4: orange and 0 if no color has been detected)
+	 */
 	private static int colorDetection(float[] rgb) {
 		float[] colorsDistances = new float[5];
 
@@ -43,13 +50,19 @@ public class RingDetection {
 		return getMinIndex(colorsDistances);
 	}
 
+	/**
+	 * 
+	 * @param rgbMean: rgb values of the ring
+	 * @param rgbValues: rgb values detected by the light sensor
+	 * @return: returns the euclidean distance between the two parameters
+	 */
 	private static double distance(float[] rgbMean, float[] rgbValues) {
 		return Math.sqrt(Math.pow(rgbMean[0] - rgbValues[0], 2) + Math.pow(rgbMean[1] - rgbValues[1], 2)
 				+ Math.pow(rgbMean[2] - rgbValues[2], 2));
 	}
 
 	/**
-	 * this method takes in the
+	 * 
 	 * 
 	 * @param inputArray
 	 * @return: the index of the minimum element of the array
@@ -66,10 +79,11 @@ public class RingDetection {
 		return minIndex;
 	}
 
-/**
- * 
- * @return: return the int of color detected (0: None, 1: Blue, 2: Green, 3: Yellow, 4: Orange)
- */
+	/**
+	 * 
+	 * @return: return the int of color detected (0: None, 1: Blue, 2: Green, 3:
+	 *          Yellow, 4: Orange)
+	 */
 	public static int colorDetection() {
 		float[] rgbValues = new float[3];
 		RingDetection.colorSample.fetchSample(rgbValues, 0);

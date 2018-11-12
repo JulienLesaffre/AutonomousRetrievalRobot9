@@ -5,6 +5,7 @@ import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.motor.NXTRegulatedMotor;
+import lejos.robotics.SampleProvider;
 import ca.mcgill.ecse211.odometer.*;
 
 /**
@@ -15,17 +16,19 @@ import ca.mcgill.ecse211.odometer.*;
 public class RingSet {
 
 	private static Odometer odometer;
+	private static SampleProvider leftSampleProvider;
+	private static SampleProvider rightSampleProvider;
 
-	private static final EV3LargeRegulatedMotor leftMotor = Navigation.leftMotor;
-	private static final EV3LargeRegulatedMotor rightMotor = Navigation.rightMotor;
 	private static final NXTRegulatedMotor ringPickUpMotor = new NXTRegulatedMotor(
 			LocalEV3.get().getPort("C"));
 	private static final EV3MediumRegulatedMotor lightSensorMotor = new EV3MediumRegulatedMotor(LocalEV3.get().getPort("B"));
 	private static final int[] RS_LL = {0,0}; //RingSet Lower Left coordinates {x,y}
 	private static final int[] RS_UR = {0,0}; //RingSet Upper Right coordinates {x,y}
 	
-	public RingSet() throws OdometerExceptions {
-		RingSet.odometer = Odometer.getOdometer();
+	public RingSet(Odometer odo,SampleProvider leftLight, SampleProvider rightLight) throws OdometerExceptions {
+		odometer = odo;
+		leftSampleProvider = leftLight;
+		rightSampleProvider = rightLight;
 
 	}
 
@@ -37,31 +40,38 @@ public class RingSet {
 	 */
 	public static void pickUpRing(int ringColor, boolean topLevel) {
 		ringPickUpMotor.setSpeed(80);
-		ringPickUpMotor.rotate(-1,false);
-		ringPickUpMotor.rotate(55);
+		ringPickUpMotor.rotate(-3,false);
+		ringPickUpMotor.rotate(60);
 		ringPickUpMotor.stop();
-		Navigation.leftMotor.setSpeed(100);
-		Navigation.rightMotor.setSpeed(100);
-		Navigation.leftMotor.rotate(280, true);
-		Navigation.rightMotor.rotate(280, true);
-		ringPickUpMotor.setSpeed(80);
-		ringPickUpMotor.rotate(-10,false);
-		Navigation.leftMotor.rotate(-200, true);
-		Navigation.rightMotor.rotate(-200, false);
-		ringPickUpMotor.rotate(-50);
-		ringPickUpMotor.stop();
+		int distance = 22;
+		Navigation.leftMotor.setSpeed(80);
+		Navigation.rightMotor.setSpeed(80);
+		Navigation.leftMotor.rotate(Navigation.convertDistance(distance), true);
+		Navigation.rightMotor.rotate(Navigation.convertDistance(distance), false);
+		ringPickUpMotor.rotate(-50,false);
+		ringPickUpMotor.setSpeed(60);
+		Navigation.leftMotor.rotate(-Navigation.convertDistance(10), true);
+		Navigation.rightMotor.rotate(-Navigation.convertDistance(10), false);
+		ringPickUpMotor.rotate(50,false);
+		ringPickUpMotor.rotate(-50,false);
+		Navigation.leftMotor.rotate(-Navigation.convertDistance(distance-10), true);
+		Navigation.rightMotor.rotate(-Navigation.convertDistance(distance-10), false);
+		ringPickUpMotor.rotate(-40,false);
+
 	}
 	
 	/**
 	 * drop the rings stored on the claw
 	 */
 	public static void dropRings() {
-		Navigation.leftMotor.setSpeed(100);
-		Navigation.rightMotor.setSpeed(100);
-		ringPickUpMotor.rotate(85);
+		Navigation.leftMotor.setSpeed(60);
+		Navigation.rightMotor.setSpeed(60);
+		ringPickUpMotor.setSpeed(100);
+		ringPickUpMotor.rotate(40);
 		Navigation.leftMotor.rotate(-400, true);
 		Navigation.rightMotor.rotate(-400, true);
-		for (int i=0; i<= 5; i++) {
+		ringPickUpMotor.setSpeed(200);
+		for (int i=0; i<= 6; i++) {
 			ringPickUpMotor.rotate(10);
 			ringPickUpMotor.rotate(-10);		
 		}
@@ -73,64 +83,114 @@ public class RingSet {
 	 * Detect the rings and their color
 	 */
 	private static void detectRings() {
-		int distanceToTravel = 10;
+		int distanceToTravel = 20;
 		Navigation.moveStraight(distanceToTravel, true, true);
-		double xStart = odometer.getXYT()[0];
-		double yStart = odometer.getXYT()[1];
-		double xEnd = odometer.getXYT()[0];
-		double yEnd = odometer.getXYT()[1];
 		int colorDetected;
+		boolean lineDetected = false;
 		boolean ringDetected = false;
-		while ((Math.abs(xStart-xEnd) < distanceToTravel) || (Math.abs(yStart-yEnd) < distanceToTravel) || !ringDetected ) {
-			xEnd = odometer.getXYT()[0];
-			yEnd = odometer.getXYT()[1];
+		while (Navigation.leftMotor.isMoving()) {
 			colorDetected = RingDetection.colorDetection();
 			switch (colorDetected) {
 				case 1:
 					Sound.beep();
-					ringDetected = true;
 					break;
 				case 2:
 					Sound.beep();
-					Sound.beep();
-					ringDetected = true;
 					break;
 				case 3:
 					Sound.beep();
-					Sound.beep();
-					Sound.beep();
-					ringDetected = true;
 					break;
 				case 4:
 					Sound.beep();
-					Sound.beep();
-					Sound.beep();
-					Sound.beep();
-					ringDetected = true;
 					break;
 				default:
 					break;
 			}
-				
+			
 			String colorDetectedString = Integer.toString(colorDetected);
-			AutonomousRetrievalRobot.lcd.drawString(colorDetectedString, 0, 0);
+			AutonomousRetrievalRobot.lcd.drawString("Color: " + colorDetectedString, 0, 0);
 		}
 		
 
 	}
+	
+	public static void findLineAhead() throws OdometerExceptions {
+		// Track how many lines found by left and right sensor
+		int foundLeft = 0;
+		int foundRight = 0;
+		float[] newColorLeft = {0};
+		float oldSampleLeft = 0;
+		float[] newColorRight = {0};
+		float oldSampleRight = 0;
+		int colorDetected = RingDetection.colorDetection();
+		Navigation.setSpeedAcceleration(60, 500);
+		Navigation.leftMotor.forward();
+		Navigation.rightMotor.forward();
+		boolean ringDetected = false;
+		while(!ringDetected || Navigation.leftMotor.isMoving() || Navigation.rightMotor.isMoving()) {
+			
+			colorDetected = RingDetection.colorDetection();
+			ringDetected = true;
+			switch (colorDetected) {
+				case 1:
+					Navigation.stopMotors();
+					break;
+				case 2:
+					Navigation.stopMotors();
+					break;
+				case 3:
+					Navigation.stopMotors();
+					break;
+				case 4:
+					Navigation.stopMotors();
+					break;
+				default:
+					ringDetected = false;
+					break;
+			}
+			String colorDetectedString = Integer.toString(colorDetected);
+			AutonomousRetrievalRobot.lcd.drawString("Color: " + colorDetectedString, 0, 0);
+					
+			// Get color sensor readings
+			leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
+			rightSampleProvider.fetchSample(newColorRight, 0); 
+
+			// If line detected for left sensor (intensity less than 0.3), only count once by keeping track of last value
+			if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
+				Navigation.leftMotor.stop(true);
+				foundLeft++;
+			}
+			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
+			if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
+				Navigation.rightMotor.stop(true);
+				foundRight++;
+			}
+
+			// Store last color readings
+			oldSampleLeft = newColorLeft[0];
+			oldSampleRight = newColorRight[0];
+
+			// If line found for both sensors, exit
+			if(foundLeft == 1 && foundRight == 1) {
+				break;
+			}
+		}
+		
+	}
+	
 
 
 	public static void ringSetMain() {
 		for (int i = 0; i <= 3; i++) {
 			detectRings();
-			Navigation.turnTo(90);
+			Navigation.turnRobot(90,true,false);
 		}
 
 	}
 	
 
-	public static void testRingSet() {
-		pickUpRing(1,true);
+	public static void testRingSet() throws OdometerExceptions {
+		findLineAhead();
 
 	}
 	

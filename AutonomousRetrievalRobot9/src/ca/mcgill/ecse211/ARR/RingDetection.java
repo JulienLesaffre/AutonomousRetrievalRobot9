@@ -33,7 +33,7 @@ public class RingDetection {
 		float[] colorsDistances = new float[5];
 
 		// if this distance is the minimum then, no Color/Object is detected
-		colorsDistances[0] = 0.07f; // to modify
+		colorsDistances[0] = 0.15f; // to modify (0.07)
 
 		// distance from Blue
 		colorsDistances[1] = (float) distance(blueRGB, rgb);
@@ -87,6 +87,8 @@ public class RingDetection {
 	public static int colorDetection() {
 		float[] rgbValues = new float[3];
 		RingDetection.colorSample.fetchSample(rgbValues, 0);
+//		System.out.println(rgbValues[0] + ";" + rgbValues[1] + ";" + rgbValues[2] );
+
 		return RingDetection.colorDetection(rgbValues);
 
 	}

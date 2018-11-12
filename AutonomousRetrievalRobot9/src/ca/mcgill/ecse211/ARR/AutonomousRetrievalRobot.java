@@ -44,6 +44,7 @@ public class AutonomousRetrievalRobot {
 	
 	static Odometer odometer = null;
 	static Navigation nav = null;
+	static RingSet rs = null;
 	static UltrasonicLocalizer usLocalizer;
 	static LightLocalizer lightLocalizer;
 	
@@ -79,36 +80,52 @@ public class AutonomousRetrievalRobot {
 		usSampleProvider = usSensor.getMode("Distance");       
 
 		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer); 
-		
+		rs = new RingSet(odometer, leftSampleProvider, rightSampleProvider);
 		//localizers
 		usLocalizer = new UltrasonicLocalizer(usSampleProvider);
 		lightLocalizer = new LightLocalizer(leftSampleProvider, rightSampleProvider);
 		
 	}
 	
-
-	public static void main(String[] args) throws OdometerExceptions {
+	public static void fouadsMain() throws OdometerExceptions {
+		Display.displayStartScreen();
 		
-//		Display.displayStartScreen(); 
-//		
-//		initialize(); 	//initialize class variables needed
-//		
-//		usLocalizer.fallingEdge();						//us localize
-//		
-//		lightLocalizer.localize(Navigation.RedCorner); 	//light localize
-//		
-//		Navigation.travelStartToTunnel();
-//		
-//		Navigation.setSpeedAcceleration(200, 1500);
-//		Navigation.moveStraight(Navigation.SQUARE_SIZE/2, true, false);
-//		Navigation.turnTo(0);
-//		Navigation.moveStraight(Navigation.SQUARE_SIZE*3.5, true, false);
-//		
-//		
+		initialize(); 	//initialize class variables needed
+		
+		usLocalizer.fallingEdge();						//us localize
+		
+		lightLocalizer.localize(Navigation.RedCorner); 	//light localize
+		
+		Navigation.travelStartToTunnel();
+		
+		Navigation.setSpeedAcceleration(200, 1500);
+		Navigation.moveStraight(Navigation.SQUARE_SIZE/2, true, false);
+		Navigation.turnTo(0);
+		Navigation.moveStraight(Navigation.SQUARE_SIZE*3.5, true, false);
+		
+		
 //		//start loop of execution
 //		// 1) 
+	}
+	
+	public static void juliensMain() throws OdometerExceptions {
+//		Display.displayStartScreen(); 	
+		initialize(); 	//initialize class variables needed
 		RingSet.testRingSet();
+//		while (true) {
+//			int rgb = RingDetection.colorDetection();
+//		}
 		
+
+
+	}
+	
+
+	public static void main(String[] args) throws OdometerExceptions {
+
+		juliensMain();	
+		
+
 		
 	}
 

@@ -28,7 +28,7 @@ public class Display {
 		lcd.clear();
 		int buttonChoice;
 		do {
-			lcd.drawString("Start ? ", 0, 0);
+			lcd.drawString("Start ? -> ", 0, 0);
 			buttonChoice = Button.waitForAnyPress(); 
 		} while (buttonChoice != Button.ID_RIGHT);
 		lcd.clear();

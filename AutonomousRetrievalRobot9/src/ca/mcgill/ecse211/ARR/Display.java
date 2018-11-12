@@ -72,6 +72,12 @@ public class Display {
 		lcd.drawString("y: " + y, 0, 1);
 		lcd.drawString("theta: " + theta, 0, 2);
 	}
+	
+	
+	public static void displayRingColor(int color) {
+		lcd.clear();
+		lcd.drawString("color: " + color, 0, 1);
+	}
 
 
 }

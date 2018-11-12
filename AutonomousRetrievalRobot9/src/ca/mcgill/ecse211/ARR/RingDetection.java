@@ -1,9 +1,5 @@
 package ca.mcgill.ecse211.ARR;
 
-import lejos.hardware.ev3.LocalEV3;
-import lejos.hardware.sensor.EV3ColorSensor;
-import lejos.hardware.sensor.SensorModes;
-import lejos.robotics.SampleProvider;
 
 public class RingDetection {
 
@@ -12,17 +8,15 @@ public class RingDetection {
 	private static float[] yellowRGB = { 0.188f, 0.132f, 0.032f };
 	private static float[] orangeRGB = { 0.103f, 0.030f, 0.028f };
 
-	public static SensorModes colorSensor = new EV3ColorSensor(LocalEV3.get().getPort("S4"));
-	public static SampleProvider colorSample = colorSensor.getMode("RGB");
-	float[] colorData;
 
-	public RingDetection() {
-		colorData = new float[colorSensor.sampleSize()];
-		float[] rgbValues = new float[3];
-		colorSample.fetchSample(rgbValues, 0);
-	}
-
-	private static int colorDetection(float[] rgb) {
+	
+	/**
+	 * @param rgb:
+	 *            rgb values detected by the light sensor
+	 * @return: returns the integer corresponding to the color detected (1: blue, 2:
+	 *          green, 3: yellow, 4: orange and 0 if no color has been detected)
+	 */
+	public static int detectColor(float[] rgb) {
 		float[] colorsDistances = new float[5];
 
 		// if this distance is the minimum then, no Color/Object is detected
@@ -43,14 +37,17 @@ public class RingDetection {
 		return getMinIndex(colorsDistances);
 	}
 
+	/**
+	 * @param rgbMean: rgb values of the ring
+	 * @param rgbValues: rgb values detected by the light sensor
+	 * @return: returns the euclidean distance between the two parameters
+	 */
 	private static double distance(float[] rgbMean, float[] rgbValues) {
 		return Math.sqrt(Math.pow(rgbMean[0] - rgbValues[0], 2) + Math.pow(rgbMean[1] - rgbValues[1], 2)
 				+ Math.pow(rgbMean[2] - rgbValues[2], 2));
 	}
 
 	/**
-	 * this method takes in the
-	 * 
 	 * @param inputArray
 	 * @return: the index of the minimum element of the array
 	 */
@@ -66,14 +63,4 @@ public class RingDetection {
 		return minIndex;
 	}
 
-/**
- * 
- * @return: return the int of color detected (0: None, 1: Blue, 2: Green, 3: Yellow, 4: Orange)
- */
-	public static int colorDetection() {
-		float[] rgbValues = new float[3];
-		RingDetection.colorSample.fetchSample(rgbValues, 0);
-		return RingDetection.colorDetection(rgbValues);
-
-	}
 }

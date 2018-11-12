@@ -128,28 +128,10 @@ public class RingSet {
 		Navigation.rightMotor.forward();
 		boolean ringDetected = false;
 		while(!ringDetected || Navigation.leftMotor.isMoving() || Navigation.rightMotor.isMoving()) {
-			
-			colorDetected = RingDetection.colorDetection();
-			ringDetected = true;
-			switch (colorDetected) {
-				case 1:
-					Navigation.stopMotors();
-					break;
-				case 2:
-					Navigation.stopMotors();
-					break;
-				case 3:
-					Navigation.stopMotors();
-					break;
-				case 4:
-					Navigation.stopMotors();
-					break;
-				default:
-					ringDetected = false;
-					break;
-			}
-			String colorDetectedString = Integer.toString(colorDetected);
-			AutonomousRetrievalRobot.lcd.drawString("Color: " + colorDetectedString, 0, 0);
+			ringDetected = RingDetection.startOfRing();
+			if(ringDetected)
+				break;
+
 					
 			// Get color sensor readings
 			leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
@@ -175,6 +157,12 @@ public class RingSet {
 				break;
 			}
 		}
+		Navigation.moveStraight(1.5, true, false);
+		colorDetected = RingDetection.colorDetection();
+		
+		String colorDetectedString = Integer.toString(colorDetected);
+		AutonomousRetrievalRobot.lcd.drawString("Color: " + colorDetectedString, 0, 0);
+		
 		
 	}
 	

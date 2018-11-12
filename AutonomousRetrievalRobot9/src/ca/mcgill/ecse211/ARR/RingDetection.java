@@ -7,10 +7,11 @@ import lejos.robotics.SampleProvider;
 
 public class RingDetection {
 
-	private static float[] blueRGB = { 0.030f, 0.105f, 0.120f };
-	private static float[] greenRGB = { 0.043f, 0.095f, 0.020f };
-	private static float[] yellowRGB = { 0.188f, 0.132f, 0.032f };
-	private static float[] orangeRGB = { 0.103f, 0.030f, 0.028f };
+	private static float[] blueRGB = { 0.030f, 0.100f, 0.120f };
+	private static float[] greenRGB = { 0.073f, 0.15f, 0.025f };
+	private static float[] yellowRGB = { 0.148f, 0.102f, 0.026f };
+	private static float[] orangeRGB = { 0.0875f, 0.0254f, 0.0095f };
+	
 
 	public static SensorModes colorSensor = new EV3ColorSensor(LocalEV3.get().getPort("S4"));
 	public static SampleProvider colorSample = colorSensor.getMode("RGB");
@@ -22,6 +23,22 @@ public class RingDetection {
 		colorSample.fetchSample(rgbValues, 0);
 	}
 
+	public static boolean startOfRing() {
+		float[] rgbValues = new float[3];
+		int ringsDetected = 0;
+		colorSample.fetchSample(rgbValues, 0);
+		if(rgbValues[0] > 0.0050f)
+			ringsDetected++;
+		if(rgbValues[1] > 0.0050f)
+			ringsDetected++;
+		if(rgbValues[2] > 0.0050f)
+			ringsDetected++;
+		
+		if(ringsDetected>= 2)
+			return true;
+		else
+			return false;
+	}
 	/**
 	 * 
 	 * @param rgb:
@@ -33,7 +50,7 @@ public class RingDetection {
 		float[] colorsDistances = new float[5];
 
 		// if this distance is the minimum then, no Color/Object is detected
-		colorsDistances[0] = 0.15f; // to modify (0.07)
+		colorsDistances[0] = 0.12f; // sensitivity to detect a color (0.07)
 
 		// distance from Blue
 		colorsDistances[1] = (float) distance(blueRGB, rgb);

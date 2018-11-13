@@ -4,6 +4,9 @@ import lejos.hardware.Sound;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.robotics.SampleProvider;
+
+import java.util.ArrayList;
+
 import ca.mcgill.ecse211.ARR.Ring.Side;
 import ca.mcgill.ecse211.odometer.*;
 
@@ -21,6 +24,8 @@ public class RingController {
 	private static EV3LargeRegulatedMotor poleMotor;
 	private static EV3MediumRegulatedMotor clawMotor;
 	private static SampleProvider sampleProvider;
+	private static SampleProvider leftSampleProvider;
+	private static SampleProvider rightSampleProvider;
 	
 	//store ring information
 	private static Ring ringNorth;
@@ -34,22 +39,25 @@ public class RingController {
 	
 	//distance and angles
 	private static final int LOWER_RING_ANGLE_OFFSET = 60;
-	private static final int CLAW_GRAB_ANGLE_FULL = 110;
+	private static final int CLAW_GRAB_ANGLE_FULL = 130;
 	private static final int CLAW_GRAB_ANGLE_HALF = 50;
-	private static final int POLE_TOPRING_ANGLE = 44;
-	private static final int POLE_BOTTOMRING_ANGLE = 60;
-	private static final double POLE_JAB_DISTANCE = 7;
+	private static final int POLE_TOPRING_ANGLE = 46;
+	private static final int POLE_BOTTOMRING_ANGLE = 67;
+	private static final double POLE_JAB_DISTANCE = 6;
 	
 	
 	
 	public RingController(Odometer odo, EV3LargeRegulatedMotor lMotor, EV3LargeRegulatedMotor rMotor, 
-			EV3LargeRegulatedMotor pMotor, EV3MediumRegulatedMotor cMotor, SampleProvider sp) throws OdometerExceptions {
+			EV3LargeRegulatedMotor pMotor, EV3MediumRegulatedMotor cMotor, SampleProvider sp, SampleProvider left, 
+			SampleProvider right) throws OdometerExceptions {
 		odometer = odo;
 		leftMotor = lMotor;
 		rightMotor = rMotor;
 		poleMotor = pMotor;
 		clawMotor = cMotor;
 		sampleProvider = sp;
+		leftSampleProvider = left;
+		rightSampleProvider = right;
 	}
 
 
@@ -59,19 +67,19 @@ public class RingController {
 		
 		for(int i = 2; i > 0; i--) {
 			
-			Navigation.moveStraight(Navigation.SENSOR_OFFSET, true, false);
 			Navigation.findLineStraight(true);
-			Navigation.moveStraight(Navigation.SENSOR_OFFSET + 3 , true, false); //move by + 3 so pole doesnt hit the ring on the way down
+			Navigation.moveStraight(3 , true, false); //move by + 3 so pole doesnt hit the ring on the way down
 			Navigation.turnRobot(Navigation.RIGHT_ANGLE, false, false);
 			Navigation.findLineStraight(true);
-			Navigation.moveStraight(Navigation.SENSOR_OFFSET + Navigation.POLE_CENTER_OFFSET, true, false);
+			Navigation.moveStraight(Navigation.POLE_CENTER_OFFSET, true, false);
 			Navigation.turnRobot(Navigation.RIGHT_ANGLE, false, false);
 			
 			//now retrieve which ring is here, and act accordingly
 			Ring ringAhead = getRingAhead();
 			
+
 			
-			
+			raisePole();
 			clawMotor.rotate(-CLAW_GRAB_ANGLE_FULL);		//extend claw
 			
 			if(ringAhead.isUp) 								//bring down pole
@@ -89,26 +97,35 @@ public class RingController {
 				clawMotor.rotate(CLAW_GRAB_ANGLE_FULL);
 			
 			
+
 			//move back, raise pole and hook claw
-			Navigation.moveStraight(POLE_JAB_DISTANCE - 3, false, true);
-			poleMotor.setAcceleration(500);
-			poleMotor.setSpeed(40);
-			poleMotor.setStallThreshold(10, 2);
-			poleMotor.rotate(-180, true);
+			Navigation.moveStraight(POLE_JAB_DISTANCE, false, true);
+
 			if(ringAhead.ringColor == 4) 					//extend claw back to push ring in pole
 				clawMotor.rotate(-CLAW_GRAB_ANGLE_HALF, true);
 			else 
 				clawMotor.rotate(-CLAW_GRAB_ANGLE_FULL, true);
-			while(true) {
-				if(poleMotor.isStalled()) {
-					poleMotor.stop(true);
-					break;
-				}
-			}
+			
+			raisePoleWithRings();
+
+			Navigation.findLineStraight(false);
 			
 			Navigation.turnRobot(Navigation.RIGHT_ANGLE, true, false);
 		}
 		
+	}
+	
+	public static void testGrab() {
+		Navigation.setSpeedAcceleration(40, 500);
+		raisePole();
+		poleMotor.setSpeed(30);
+		poleMotor.rotate(POLE_BOTTOMRING_ANGLE);
+		Navigation.moveStraight(7, true, false);
+		clawMotor.rotate(CLAW_GRAB_ANGLE_FULL);
+		Navigation.moveStraight(7, false, true);
+		poleMotor.rotate(-POLE_BOTTOMRING_ANGLE);
+		clawMotor.rotate(-CLAW_GRAB_ANGLE_FULL, false);
+		raisePoleWithRings();
 	}
 	
 	
@@ -140,39 +157,115 @@ public class RingController {
 			return ringNorth;
 	}
 
-	
+	public static void findLineAhead() throws OdometerExceptions {
+		// Track how many lines found by left and right sensor
+		int foundLeft = 0;
+		int foundRight = 0;
+		float[] newColorLeft = {0};
+		float oldSampleLeft = 0;
+		float[] newColorRight = {0};
+		float oldSampleRight = 0;
+		int colorDetected = RingDetection.colorDetection();
+		Navigation.setSpeedAcceleration(60, 500);
+		leftMotor.forward();
+		rightMotor.forward();
+		boolean ringDetected = false;
+		while(!ringDetected || leftMotor.isMoving() || rightMotor.isMoving()) {
+			ringDetected = RingDetection.startOfRing();
+			if(ringDetected)
+				break;
+
+					
+			// Get color sensor readings
+			leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
+			rightSampleProvider.fetchSample(newColorRight, 0); 
+
+			// If line detected for left sensor (intensity less than 0.3), only count once by keeping track of last value
+			if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
+				leftMotor.stop(true);
+				foundLeft++;
+			}
+			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
+			if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
+				rightMotor.stop(true);
+				foundRight++;
+			}
+
+			// Store last color readings
+			oldSampleLeft = newColorLeft[0];
+			oldSampleRight = newColorRight[0];
+
+			// If line found for both sensors, exit
+			if(foundLeft == 1 && foundRight == 1) {
+				break;
+			}
+		}
+		
+		if(ringDetected) {
+			Navigation.moveStraight(1.7, true, false);
+			colorDetected = RingDetection.colorDetection();
+			ArrayList<Integer> samples = new ArrayList<Integer>(300);
+			for(int i = 0; i<300 ; i++) {
+				samples.add(RingDetection.colorDetection());
+			}
+			int avg = average(samples);
+			saveRingDetection(true, avg);
+			makeSound(avg);
+			
+			System.out.println("" + avg);
+			
+		}
+
+		if(foundLeft == 0 || foundRight == 0) {
+			Navigation.findLineStraight(true);
+		}
+		
+		if(!ringDetected) {
+			Navigation.moveStraight(4, true, false);
+			poleMotor.rotate(60);
+			Navigation.moveStraight(13, false, true);
+			ringDetected = false;
+			while(!ringDetected) {
+				ringDetected = RingDetection.startOfRing();
+				if(ringDetected) {
+					Navigation.moveStraight(1.7, false, false);
+					colorDetected = RingDetection.colorDetection();
+					ArrayList<Integer> samples = new ArrayList<Integer>(300);
+					for(int i = 0; i<300 ; i++) {
+						samples.add(RingDetection.colorDetection());
+					}
+					
+					int avg = average(samples);
+					saveRingDetection(true, avg);
+					
+					makeSound(avg);
+					String colorDetectedString = Integer.toString(avg);
+					Display.lcd.drawString("Color: " + colorDetectedString, 0, 0);
+				}
+			}
+			Navigation.findLineStraight(true);
+		}
+
+		
+	}
 	
 	public static void detectAllRings() throws OdometerExceptions {
 		
-		raisePole();
+		for(int i=0; i<4; i++) {
+			raisePole();
 
-		Navigation.moveStraight(Navigation.RING_DETECTION_OFFSET, true, false);
-		Navigation.turnRobot(Navigation.RIGHT_ANGLE, false, false);
-		
-
-		float[] rgbValues = new float[sampleProvider.sampleSize()];
-		int colorDetected = 0;
-		
-		Navigation.setSpeedAcceleration(COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
-		Navigation.moveStraight(Navigation.SQUARE_SIZE, true, true);
-		
-		while(leftMotor.isMoving()) {
-			sampleProvider.fetchSample(rgbValues, 0);
-			colorDetected = RingDetection.detectColor(rgbValues);
-			if(colorDetected != 0) {
-				Navigation.stopMotors();
-				break;
-			}
-
+			Navigation.moveStraight(Navigation.RING_DETECTION_OFFSET, true, false);
+			Navigation.turnRobot(Navigation.RIGHT_ANGLE, false, false);
+			findLineAhead();
+			
+			
 		}
 		
-		Navigation.moveStraight(1, true, false);
-		
-		sampleProvider.fetchSample(rgbValues, 0);
-		colorDetected = RingDetection.detectColor(rgbValues);
-		Display.displayRingColor(colorDetected);
-		
-		switch (colorDetected) {
+
+	}
+	
+	public static void makeSound(int color) {
+		switch (color) {
 		case 1:
 			Sound.beep();
 			break;
@@ -191,38 +284,6 @@ public class RingController {
 			Sound.beep();
 			Sound.beep();
 			break;
-		}
-		
-		//if color detected save value
-		if(colorDetected != 0) saveRingDetection(true, colorDetected);
-		else {
-			//else search bottom ring half
-			Navigation.findLineStraight(false);				//move to line
-			poleMotor.rotate(LOWER_RING_ANGLE_OFFSET);
-			
-			sampleProvider.fetchSample(rgbValues, 0);
-			colorDetected = RingDetection.detectColor(rgbValues);
-			Display.displayRingColor(colorDetected);
-			
-			switch (colorDetected) {
-			case 1:
-				Sound.beep();
-			case 2:
-				Sound.beep();
-				Sound.beep();
-			case 3:
-				Sound.beep();
-				Sound.beep();
-				Sound.beep();
-			case 4:
-				Sound.beep();
-				Sound.beep();
-				Sound.beep();
-				Sound.beep();
-			}
-			
-			if(colorDetected != 0) saveRingDetection(false, colorDetected);
-			
 		}
 	}
 	
@@ -251,8 +312,21 @@ public class RingController {
 		//make sure color sensor is at its highest
 		poleMotor.setAcceleration(500);
 		poleMotor.setSpeed(40);
-		poleMotor.setStallThreshold(10, 2);
-		poleMotor.rotate(-180, true);
+		poleMotor.setStallThreshold(20, 4);
+		poleMotor.rotate(-360, true);
+		while(true) {
+			if(poleMotor.isStalled()) {
+				poleMotor.stop(true);
+				break;
+			}
+		}
+	}
+	public static void raisePoleWithRings() {
+		//make sure color sensor is at its highest
+		poleMotor.setAcceleration(500);
+		poleMotor.setSpeed(40);
+		poleMotor.setStallThreshold(20, 7);
+		poleMotor.rotate(-200, true);
 		while(true) {
 			if(poleMotor.isStalled()) {
 				poleMotor.stop(true);
@@ -278,6 +352,15 @@ public class RingController {
 		}
 	}
 	
+	
+
+	
+	public static int average(ArrayList<Integer> samples) {
+		float sum = 0;
+		for(Integer sample : samples)
+		    sum += sample;
+		return (int) (sum/samples.size());
+	}
 	/*
 	poleMotor.setAcceleration(500);
 	poleMotor.setSpeed(70);

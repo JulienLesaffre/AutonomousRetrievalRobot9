@@ -25,6 +25,8 @@ import lejos.hardware.Button;
  * ///////TODO//////////
  * fix case for start to tunnel where its at 2,2 3,4
  * cases where ringset is first to the left/right of tunnel
+ * beginning unnecessary move
+ * 
  * //////////////////////
  */
 
@@ -100,7 +102,8 @@ public class AutonomousRetrievalRobot {
 		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor, poleMotor, clawMotor); 
 		usLocalizer = new UltrasonicLocalizer(usSampleProvider, leftMotor, rightMotor);
 		lightLocalizer = new LightLocalizer(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor);
-		ringCont = new RingController(odometer, leftMotor, rightMotor, poleMotor, clawMotor, colorSampleProvider);
+		ringDetection = new RingDetection(colorSampleProvider);
+		ringCont = new RingController(odometer, leftMotor, rightMotor, poleMotor, clawMotor, colorSampleProvider, leftSampleProvider, rightSampleProvider);
 		
 	}
 	
@@ -166,12 +169,17 @@ public class AutonomousRetrievalRobot {
 
 	public static void main(String[] args) throws OdometerExceptions {
 		
-		Display.displayStartScreen(); 
+
 		
 		initialize(); 									//initialize class variables needed
+		Display.displayStartScreen(); 
 		
-		retrieveDataFromServer();						//connect to the server and wait to recieve variables
+		RingController.raisePole();
+
+		clawMotor.rotate(110);
 		
+//		retrieveDataFromServer();						//connect to the server and wait to recieve variables
+//		
 		usLocalizer.fallingEdge();						//us localize
 		
 		lightLocalizer.localize(); 						//light localize
@@ -187,6 +195,13 @@ public class AutonomousRetrievalRobot {
 		Navigation.travelRingSetToTunnel();
 		
 		Navigation.travelTunnelToStart();
+		
+		
+		RingController.testGrab();
+		while(Button.waitForAnyPress() != Button.ID_ESCAPE) {
+			RingController.testGrab();
+		}
+
 
 	}
 	

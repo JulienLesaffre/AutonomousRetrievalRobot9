@@ -30,24 +30,24 @@ public class Navigation {
 	public static int Island_UR_x = -1;
 	public static int Island_UR_y = -1;
 	public static int TNR_LL_x = 0;
-	public static int TNR_LL_y = 2;
+	public static int TNR_LL_y = 3;
 	public static int TNR_UR_x = 1;
-	public static int TNR_UR_y = 4;
+	public static int TNR_UR_y = 5;
 	public static int TNG_LL_x = -1;
 	public static int TNG_LL_y = -1;
 	public static int TNG_UR_x = -1;
 	public static int TNG_UR_y = -1;
-	public static int TR_x = 2;
-	public static int TR_y = 7;
+	public static int TR_x = 3;
+	public static int TR_y = 6;
 	public static int TG_x = -1;
 	public static int TG_y = -1;
 	
 	//Speed and acceleration
 	private static final int ROTATE_SPEED = 100;
-	private static final int ROTATE_ACCEL = 1000;
-	private static final int NAV_WITH_CORR_SPEED = 110;
+	private static final int ROTATE_ACCEL = 500;
+	private static final int NAV_WITH_CORR_SPEED = 140;
 	private static final int NAV_WITH_CORR_ACCEL = 1000;
-	private static final int TUNNEL_SPPED = 130;
+	private static final int TUNNEL_SPPED = 160;
 	private static final int TUNNEL_ACCEL = 1000;
 	
 	//distance measurements
@@ -55,7 +55,7 @@ public class Navigation {
 	public static final double TRACK = 12.85;
 	public static final double SQUARE_SIZE = 30.48;
 	public static final double SENSOR_OFFSET = 4.9;
-	public static final double RING_DETECTION_OFFSET = 19.5;
+	public static final double RING_DETECTION_OFFSET = 21.7;
 	public static final double POLE_CENTER_OFFSET = 1.5;
 	public static final int RIGHT_ANGLE = 90;
 
@@ -120,6 +120,7 @@ public class Navigation {
 		
 		double myX = odometer.getXYT()[0];
 		double myY = odometer.getXYT()[1];
+
 
 		//if tunnel vertical, move by x first to within one tile of tunnelMidpoint x value
 		if(isTunnelVertical) {
@@ -277,19 +278,21 @@ public class Navigation {
 		double absAngle = Math.toDegrees(Math.atan2((tunnelMidpoint[0] - myX), (tunnelMidpoint[1] - myY)));
 		turnTo(absAngle); 
 		
+		RingController.raisePole();
 		poleMotor.rotate(45);
-		clawMotor.rotate(-110);
+		
 		
 		
 		
 		setSpeedAcceleration(TUNNEL_SPPED, TUNNEL_ACCEL);
-		moveStraight(SQUARE_SIZE * 3.6, true, false);
-		poleMotor.rotate(-45);
-		clawMotor.rotate(110);
+		moveStraight(SQUARE_SIZE * 3.3, true, false);
+		RingController.raisePole();
+		findLineStraight(true);
 	}
 	
 	
-	
+
+
 	/**
 	 * This method takes the robot from just having gone outside the tunnel to the ring set
 	 * so that it is in position to start circling the set detecting the ring colors. There
@@ -333,62 +336,137 @@ public class Navigation {
 	//expects the robot to be on one of 4 grid intersections around the ringset
 	public static void travelRingSetToTunnel() throws OdometerExceptions {
 		
-		//find closest corner tile
-		int ringSetX, ringSetY;
-		if(RedTeam == 9) {
-			ringSetX = TR_x;
-			ringSetY = TR_y;
-		} else {
-			ringSetX = TG_x;
-			ringSetY = TG_y;
-		}
-		double[] tunnelExitMidpoint = findTunnelMidpoint(false);
-		double[] cornerCoordinates = new double[2];
-		double xVector = tunnelExitMidpoint[0] - ringSetX;
-		double yVector = tunnelExitMidpoint[1] - ringSetY;
-		double ringsetToTunnelTheta = Math.toDegrees(Math.atan2(xVector, yVector));
-		if(ringsetToTunnelTheta < 180 && ringsetToTunnelTheta > 90) {				//south east
-			cornerCoordinates[0] = ringSetX * SQUARE_SIZE + SQUARE_SIZE;
-			cornerCoordinates[1] = ringSetY * SQUARE_SIZE - SQUARE_SIZE;
-		} else if(ringsetToTunnelTheta > 180 && ringsetToTunnelTheta < 270) {		//south west
-			cornerCoordinates[0] = ringSetX * SQUARE_SIZE - SQUARE_SIZE;
-			cornerCoordinates[1] = ringSetY * SQUARE_SIZE - SQUARE_SIZE;
-		} else if(ringsetToTunnelTheta > 270 && ringsetToTunnelTheta < 360) {		//north west
-			cornerCoordinates[0] = ringSetX * SQUARE_SIZE - SQUARE_SIZE;
-			cornerCoordinates[1] = ringSetY * SQUARE_SIZE + SQUARE_SIZE;
-		} else if(ringsetToTunnelTheta > 0 && ringsetToTunnelTheta < 90) {			//north east
-			cornerCoordinates[0] = ringSetX * SQUARE_SIZE + SQUARE_SIZE;
-			cornerCoordinates[1] = ringSetY * SQUARE_SIZE + SQUARE_SIZE;
-		}
-		
-		//now move to corner to avoid ringset
-		int x, y;
+//		//find closest corner tile
+//		int ringSetX, ringSetY;
+//		if(RedTeam == 9) {
+//			ringSetX = TR_x;
+//			ringSetY = TR_y;
+//		} else {
+//			ringSetX = TG_x;
+//			ringSetY = TG_y;
+//		}
+//		double[] tunnelExitMidpoint = findTunnelMidpoint(false);
+//		double[] cornerCoordinates = new double[2];
+//		double xVector = tunnelExitMidpoint[0] - ringSetX;
+//		double yVector = tunnelExitMidpoint[1] - ringSetY;
+//		double ringsetToTunnelTheta = Math.toDegrees(Math.atan2(xVector, yVector));
+//		if(ringsetToTunnelTheta < 180 && ringsetToTunnelTheta > 90) {				//south east
+//			cornerCoordinates[0] = ringSetX * SQUARE_SIZE + SQUARE_SIZE;
+//			cornerCoordinates[1] = ringSetY * SQUARE_SIZE - SQUARE_SIZE;
+//		} else if(ringsetToTunnelTheta > 180 && ringsetToTunnelTheta < 270) {		//south west
+//			cornerCoordinates[0] = ringSetX * SQUARE_SIZE - SQUARE_SIZE;
+//			cornerCoordinates[1] = ringSetY * SQUARE_SIZE - SQUARE_SIZE;
+//		} else if(ringsetToTunnelTheta > 270 && ringsetToTunnelTheta < 360) {		//north west
+//			cornerCoordinates[0] = ringSetX * SQUARE_SIZE - SQUARE_SIZE;
+//			cornerCoordinates[1] = ringSetY * SQUARE_SIZE + SQUARE_SIZE;
+//		} else if(ringsetToTunnelTheta > 0 && ringsetToTunnelTheta < 90) {			//north east
+//			cornerCoordinates[0] = ringSetX * SQUARE_SIZE + SQUARE_SIZE;
+//			cornerCoordinates[1] = ringSetY * SQUARE_SIZE + SQUARE_SIZE;
+//		}
+//		
+//		//now move to corner to avoid ringset
+//		int x, y;
 		double myX = odometer.getXYT()[0];
 		double myY = odometer.getXYT()[1];
-		double distanceToCorner = Math.hypot(cornerCoordinates[0] - myX, cornerCoordinates[1] - myY);
+//		double distanceToCorner = Math.hypot(cornerCoordinates[0] - myX, cornerCoordinates[1] - myY);
+//		
+//
+//		if(distanceToCorner > SQUARE_SIZE + 5) {										//else move out the way first and then move to corner
+//			x = (int) Math.round(myX/SQUARE_SIZE);
+//			y = (int) Math.round(myY/SQUARE_SIZE);
+//			//if tunnel vertical check +1-1 y from current point to see if thats the target ringset, if so move one tile by x towards it
+//			if(isTunnelVertical) {
+//				if(x == ringSetX && (y == ringSetY + 1 || y == ringSetY - 1)) {
+//					travelToWithCorrection(cornerCoordinates[0], myY);
+//					travelToWithCorrection(cornerCoordinates[0], cornerCoordinates[1]);
+//				}
+//				else {
+//					travelToWithCorrection(myX, cornerCoordinates[1]);
+//					travelToWithCorrection(cornerCoordinates[0], cornerCoordinates[1]);
+//				}
+//
+//			} else {
+//				if(y == ringSetY && (x == ringSetX + 1 || x == ringSetX - 1)) {
+//					travelToWithCorrection(myX, cornerCoordinates[1]);	
+//					travelToWithCorrection(cornerCoordinates[0], cornerCoordinates[1]);
+//				}
+//				else {
+//					travelToWithCorrection(cornerCoordinates[0], myY);
+//					travelToWithCorrection(cornerCoordinates[0], cornerCoordinates[1]);
+//				}
+//			}
+//		}
 		
-		if(distanceToCorner < SQUARE_SIZE + 4)		//if its one of the two closer tiles no need just move
-			travelToWithCorrection(cornerCoordinates[0], cornerCoordinates[1]);
-		else {										//else move out the way first and then move to corner
-			x = (int) Math.round(myX/SQUARE_SIZE);
-			y = (int) Math.round(myY/SQUARE_SIZE);
-			//if tunnel vertical check +1-1 y from current point to see if thats the target ringset, if so move one tile by x towards it
-			if(isTunnelVertical) {
-				if(x == ringSetX && (y == ringSetY + 1 || y == ringSetY - 1))
-					travelToWithCorrection(cornerCoordinates[0], myY);
-				else
-					travelToWithCorrection(myX, cornerCoordinates[1]);
-			} else {
-				if(y == ringSetY && (x == ringSetX + 1 || x == ringSetX - 1))
-					travelToWithCorrection(myX, cornerCoordinates[1]);	
-				else
-					travelToWithCorrection(cornerCoordinates[0], myY);
-			}
+		
+		double[] destination = findClosestCoordinates();
+		if(isTunnelVertical) {
+			travelToWithCorrection(destination[0], myY);
+			travelToWithCorrection(destination[0], destination[1]);
+		} else {
+			travelToWithCorrection(myX, destination[1]);
+			travelToWithCorrection(destination[0], destination[1]);
+
+		}
+		
+		double[] tunnelMidpoint = findTunnelMidpoint(false);
+		//for all cases tunnel now is either to left or right
+		//turn to midpoint of tunnel and go through it
+		myX = odometer.getXYT()[0];
+		myY = odometer.getXYT()[1];
+		double absAngle = Math.toDegrees(Math.atan2((tunnelMidpoint[0] - myX), (tunnelMidpoint[1] - myY)));
+		turnTo(absAngle); 
+		findLineStraight(true);
+		moveStraight(SQUARE_SIZE, true, false);
+		
+		
+		RingController.raisePole();
+		poleMotor.rotate(45);
+		turnRobot(90, true, false);
+		
+		setSpeedAcceleration(TUNNEL_SPPED, TUNNEL_ACCEL);
+		moveStraight(SQUARE_SIZE * 3.3, true, false);
+		RingController.raisePole();
+		findLineStraight(true);
+	}
+	
+	
+	public static double[] findClosestCoordinates() {
+		//then find the upper midpoint of the tiles to the right and left of the tunnel exit
+		double[] tunnelStartMidpoint = findTunnelMidpoint(true);
+		double[] tunnelExitMidpoint = findTunnelMidpoint(false);
+
+		double[] coordinatesRight = new double[2];
+		double[] coordinatesLeft = new double[2];
+		if(isTunnelVertical && tunnelStartMidpoint[1] < tunnelExitMidpoint[1]) { 			//north
+			coordinatesRight[0] = tunnelExitMidpoint[0] + SQUARE_SIZE;
+			coordinatesRight[1] = tunnelExitMidpoint[1] + SQUARE_SIZE;
+			coordinatesLeft[0] = tunnelExitMidpoint[0] - SQUARE_SIZE;
+			coordinatesLeft[1] = tunnelExitMidpoint[1] + SQUARE_SIZE;
+		} else if (isTunnelVertical && tunnelStartMidpoint[1] > tunnelExitMidpoint[1]) {	//south
+			coordinatesRight[0] = tunnelExitMidpoint[0] - SQUARE_SIZE;
+			coordinatesRight[1] = tunnelExitMidpoint[1] - SQUARE_SIZE;
+			coordinatesLeft[0] = tunnelExitMidpoint[0] + SQUARE_SIZE;
+			coordinatesLeft[1] = tunnelExitMidpoint[1] - SQUARE_SIZE;
+		} else if (!isTunnelVertical && tunnelStartMidpoint[0] < tunnelExitMidpoint[0]) {	//east
+			coordinatesRight[0] = tunnelExitMidpoint[0] + SQUARE_SIZE;
+			coordinatesRight[1] = tunnelExitMidpoint[1] - SQUARE_SIZE;
+			coordinatesLeft[0] = tunnelExitMidpoint[0] + SQUARE_SIZE;
+			coordinatesLeft[1] = tunnelExitMidpoint[1] + SQUARE_SIZE;
+		} else if (isTunnelVertical && tunnelStartMidpoint[0] > tunnelExitMidpoint[0]) {	//west
+			coordinatesRight[0] = tunnelExitMidpoint[0] - SQUARE_SIZE;
+			coordinatesRight[1] = tunnelExitMidpoint[1] + SQUARE_SIZE;
+			coordinatesLeft[0] = tunnelExitMidpoint[0] - SQUARE_SIZE;
+			coordinatesLeft[1] = tunnelExitMidpoint[1] - SQUARE_SIZE;
 		}
 
+		//whichever one is closer go to it moving perpendicular to tunnel first
+		double myX = odometer.getXYT()[0];
+		double myY = odometer.getXYT()[1];
+		double[] tileCoordinates = 
+				Math.hypot(coordinatesRight[0] - myX, coordinatesRight[1] - myY) < Math.hypot(coordinatesLeft[0] - myX, coordinatesLeft[1] - myY) 
+				? coordinatesRight : coordinatesLeft;
 		
-		//now that we avoided, move to tunnel exit midpoint and go through it
-		travelToTunnel(false);
+		return tileCoordinates;
 	}
 	
 	public static void travelTunnelToStart() throws OdometerExceptions {
@@ -479,25 +557,25 @@ public class Navigation {
 			if(ringSetIsLeft) {		// +x -y
 				tileCoord[0] +=  (SQUARE_SIZE);
 			} else {				// -x -y
-				tileCoord[1] -=  (SQUARE_SIZE);
+				tileCoord[0] -=  (SQUARE_SIZE);
 			}
 		} else if (heading.equalsIgnoreCase("east")) {					//heading east
 			if(ringSetIsLeft) {		// -x -y
 				tileCoord[1] -=  (SQUARE_SIZE);
 			} else {				// -x +y
-				tileCoord[0] -=  (SQUARE_SIZE);
+				tileCoord[1] +=  (SQUARE_SIZE);
 			}
 		} else if (heading.equalsIgnoreCase("south")) { 				//heading south
 			if(ringSetIsLeft) {		// -x +y
 				tileCoord[0] -=  (SQUARE_SIZE);
 			} else {				// +x +y
-				tileCoord[1] +=  (SQUARE_SIZE);
+				tileCoord[0] +=  (SQUARE_SIZE);
 			}
 		} else if (heading.equalsIgnoreCase("west")) { 					//heading west
 			if(ringSetIsLeft) {		// +x +y
 				tileCoord[1] +=  (SQUARE_SIZE);
 			} else {				// +x -y
-				tileCoord[0] +=  (SQUARE_SIZE);
+				tileCoord[1] -=  (SQUARE_SIZE);
 			}
 		}
 		return tileCoord;

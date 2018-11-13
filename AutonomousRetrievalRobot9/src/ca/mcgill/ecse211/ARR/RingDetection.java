@@ -1,5 +1,6 @@
 package ca.mcgill.ecse211.ARR;
 
+import lejos.robotics.SampleProvider;
 
 public class RingDetection {
 
@@ -8,7 +9,11 @@ public class RingDetection {
 	private static float[] yellowRGB = { 0.188f, 0.132f, 0.032f };
 	private static float[] orangeRGB = { 0.103f, 0.030f, 0.028f };
 
+	private static SampleProvider colorSample;
 
+	public RingDetection(SampleProvider sp) {
+		colorSample = sp;
+	}
 	
 	/**
 	 * @param rgb:
@@ -47,6 +52,43 @@ public class RingDetection {
 				+ Math.pow(rgbMean[2] - rgbValues[2], 2));
 	}
 
+	public static boolean startOfRing() {
+		float[] rgbValues = new float[3];
+		int ringsDetected = 0;
+		colorSample.fetchSample(rgbValues, 0);
+		if(rgbValues[0] > 0.010f)
+			ringsDetected++;
+		if(rgbValues[1] > 0.010f)
+			ringsDetected++;
+		if(rgbValues[2] > 0.010f)
+			ringsDetected++;
+		
+		if(ringsDetected>= 2)
+			return true;
+		else
+			return false;
+	}
+	
+	private static int colorDetection(float[] rgb) {
+		float[] colorsDistances = new float[5];
+
+		// if this distance is the minimum then, no Color/Object is detected
+		colorsDistances[0] = 0.12f; // sensitivity to detect a color (0.07)
+
+		// distance from Blue
+		colorsDistances[1] = (float) distance(blueRGB, rgb);
+
+		// distance from Green
+		colorsDistances[2] = (float) distance(greenRGB, rgb);
+
+		// distance from Yellow
+		colorsDistances[3] = (float) distance(yellowRGB, rgb);
+
+		// distance from Orange
+		colorsDistances[4] = (float) distance(orangeRGB, rgb);
+
+		return getMinIndex(colorsDistances);
+	}
 	/**
 	 * @param inputArray
 	 * @return: the index of the minimum element of the array
@@ -62,5 +104,15 @@ public class RingDetection {
 		}
 		return minIndex;
 	}
+	public static int colorDetection() {
+		float[] rgbValues = new float[3];
+		RingDetection.colorSample.fetchSample(rgbValues, 0);
+//		System.out.println(rgbValues[0] + ";" + rgbValues[1] + ";" + rgbValues[2] );
+
+		return RingDetection.colorDetection(rgbValues);
+
+	}
+	
+
 
 }

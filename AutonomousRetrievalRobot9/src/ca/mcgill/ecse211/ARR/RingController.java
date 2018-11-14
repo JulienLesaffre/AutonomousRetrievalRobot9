@@ -112,7 +112,6 @@ public class RingController {
 			//move back, raise pole and hook claw
 			Navigation.moveStraight(POLE_JAB_DISTANCE, false, false);
 
-
 			clawMotor.rotateTo(0);
 			poleMotor.rotateTo(POLE_TOPRING_ANGLE);
 

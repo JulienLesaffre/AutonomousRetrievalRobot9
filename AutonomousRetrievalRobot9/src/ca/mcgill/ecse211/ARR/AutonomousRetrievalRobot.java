@@ -189,9 +189,6 @@ public class AutonomousRetrievalRobot {
 		
 		initializeHook();
 		
-//		test();
-
-		
 		
 
 //		retrieveDataFromServer();						//connect to the server and wait to recieve variables

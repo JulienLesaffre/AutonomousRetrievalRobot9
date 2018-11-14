@@ -41,7 +41,7 @@ public class RingController {
 	public static final int CLAW_GRAB_ANGLE_HALF = 60;
 	private static final int POLE_TOPRING_ANGLE = 45;
 	private static final int POLE_BOTTOMRING_ANGLE = 66;
-	private static final double POLE_JAB_DISTANCE = 5;
+	private static final double POLE_JAB_DISTANCE = 15;
 	
 	
 	
@@ -97,7 +97,7 @@ public class RingController {
 			
 			
 			Navigation.setSpeedAcceleration(50, 500);
-			Navigation.findLineStraight(true);
+//			Navigation.findLineStraight(true);
 			
 
 			
@@ -109,7 +109,6 @@ public class RingController {
 				clawMotor.rotateTo(CLAW_GRAB_ANGLE_FULL);
 			
 			
-
 			//move back, raise pole and hook claw
 			Navigation.moveStraight(POLE_JAB_DISTANCE, false, false);
 
@@ -190,7 +189,7 @@ public class RingController {
 	 */
 	public static void detectAllRings() throws OdometerExceptions {
 		//turn so ring set is to the left of robot
-		Navigation.setupHeadingForDetection();
+//		Navigation.setupHeadingForDetection();
 		for(int i=0; i<4; i++) {
 			poleMotor.rotateTo(0);
 			Navigation.moveStraight(Navigation.RING_DETECTION_OFFSET, true, false);
@@ -384,6 +383,10 @@ public class RingController {
 	public static void makeSound(int color) {
 		for (int i = 0; i < color; i++) 
 			Sound.beep();
+	}
+	
+	public static void testing() {
+		
 	}
 	
 

@@ -29,16 +29,18 @@ public class Navigation {
 	public static int Island_LL_y = -1;
 	public static int Island_UR_x = -1;
 	public static int Island_UR_y = -1;
-	public static int TNR_LL_x = 3;
-	public static int TNR_LL_y = 3;
-	public static int TNR_UR_x = 4;
-	public static int TNR_UR_y = 5;
-	public static int TNG_LL_x = 3;
+	public static int TNR_LL_x = -1;
+	public static int TNR_LL_y = -1;
+	public static int TNR_UR_x = -1;
+	public static int TNR_UR_y = -1;
+	public static int TR_x = -1;
+	public static int TR_y = -1;
+	
+	
+	public static int TNG_LL_x = 2;
 	public static int TNG_LL_y = 2;
-	public static int TNG_UR_x = 5;
+	public static int TNG_UR_x = 4;
 	public static int TNG_UR_y = 3;
-	public static int TR_x = 6;
-	public static int TR_y = 6;
 	public static int TG_x = 6;
 	public static int TG_y = 4;
 	
@@ -318,7 +320,7 @@ public class Navigation {
 			targetCoordinate = getTargetCoordinate(true);
 		else 
 			targetCoordinate = getTargetCoordinate(false);
-
+ 
 		//travel first in direction you are currently traveling in
 		//if traveling north/south, move to y of bottomRightTile
 		if(heading.equalsIgnoreCase("north") || heading.equalsIgnoreCase("south")) 
@@ -329,6 +331,8 @@ public class Navigation {
 
 		//now move other axis to reach bottomRightTile
 		travelToWithCorrection(targetCoordinate[0], targetCoordinate[1]);
+		stopMotors();
+		RingController.makeSound(3);
 	}
 	
 	
@@ -532,9 +536,6 @@ public class Navigation {
 	}
 	
 	
-	
-	
-	
 	/**
 	 * This method assumes the robot is directly on top of one of the 4 intersections
 	 * around the ring set. It turns the robot so that the ring set is facing the left
@@ -613,8 +614,6 @@ public class Navigation {
 		return tileCoord;
 	}
 
-	
-	
 
 	/**
 	 * This method uses the game parameters and the robots current heading to
@@ -1016,8 +1015,6 @@ public class Navigation {
 	}
 	
 	
-	
-	
 	public static void testFiniteDifferencesLightSensor() {
 		System.out.println("hello");
 		int window = 6;
@@ -1121,7 +1118,6 @@ public class Navigation {
 		    sum += sample;
 		return sum/samples.size();
 	}
-
 
 	
     /**

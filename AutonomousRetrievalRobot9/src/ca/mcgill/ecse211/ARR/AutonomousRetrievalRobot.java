@@ -168,23 +168,42 @@ public class AutonomousRetrievalRobot {
 		clawMotor.rotateTo(RingController.CLAW_GRAB_ANGLE_FULL);
 	}
 	
+	public static void test() {
+		poleMotor.rotateTo(0);
+		while (Button.waitForAnyPress() != Button.ID_ESCAPE) {
+			poleMotor.rotateTo(0);
+			if (Button.waitForAnyPress() == Button.ID_LEFT) {
+				poleMotor.rotateTo(45);
+			}
+			else {
+				poleMotor.rotateTo(65);
+			}
+		}
+	}
+	
 	
 	public static void main(String[] args) throws OdometerExceptions {
 		
 		initialize(); 									//initialize class variables needed
 		
+		
 		initializeHook();
+		
+//		test();
 
-		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		
-		usLocalizer.fallingEdge();						//us localize
 		
-		lightLocalizer.localize(); 						//light localize
+
+//		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		
-		Navigation.travelToTunnel(true);				//travel to and through tunnel
-		
-		Navigation.travelTunnelToRingSet();				//travel from tunnel to ring set
-		
+//		usLocalizer.fallingEdge();						//us localize
+//		
+//		lightLocalizer.localize(); 						//light localize
+//		
+//		Navigation.travelToTunnel(true);				//travel to and through tunnel
+//		
+//		Navigation.travelTunnelToRingSet();				//travel from tunnel to ring set
+//		
 		RingController.detectAllRings();
 		
 		RingController.pickUpTwoRings();

@@ -4,6 +4,7 @@ import ca.mcgill.ecse211.ARR.Display;
 import ca.mcgill.ecse211.ARR.Navigation;
 import ca.mcgill.ecse211.odometer.Odometer;
 import ca.mcgill.ecse211.odometer.OdometerExceptions;
+import lejos.hardware.Sound;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.robotics.SampleProvider;
 
@@ -91,6 +92,10 @@ public class LightLocalizer {
 		double[] data = odo.getXYT();
 		Display.displayNavigation(data[0], data[1], data[2]);
 		
+		Sound.beep();
+		Sound.beep();
+		Sound.beep();
+		
 		isLightLocalizing = false;
 		
 	}
@@ -112,18 +117,18 @@ public class LightLocalizer {
 			odo.setTheta(0);
 			break;
 		case 1:
-			odo.setX(14.0 * Navigation.SQUARE_SIZE);
+			odo.setX(7.0 * Navigation.SQUARE_SIZE);
 			odo.setY(Navigation.SQUARE_SIZE);
 			odo.setTheta(270);
 			break;
 		case 2:
-			odo.setX(14.0 * Navigation.SQUARE_SIZE);
-			odo.setY(8.0 * Navigation.SQUARE_SIZE);
+			odo.setX(7.0 * Navigation.SQUARE_SIZE);
+			odo.setY(7.0 * Navigation.SQUARE_SIZE);
 			odo.setTheta(180);
 			break;
 		case 3:
 			odo.setX(Navigation.SQUARE_SIZE);
-			odo.setY(8.0 * Navigation.SQUARE_SIZE);
+			odo.setY(7.0 * Navigation.SQUARE_SIZE);
 			odo.setTheta(90);
 			break;
 		}
@@ -224,11 +229,6 @@ public class LightLocalizer {
 	}
 	
 	
-	public static void testClaw() throws OdometerExceptions {
-		
-		findstraight();
-		findright();
-	}
 	
 	/**
 	 * This method finds the second right line for correcting the odometer

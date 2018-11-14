@@ -20,17 +20,6 @@ import lejos.hardware.Button;
 
 
 
-
-/* //////////////////////
- * ///////TODO//////////
- * fix case for start to tunnel where its at 2,2 3,4
- * cases where ringset is first to the left/right of tunnel
- * beginning unnecessary move
- * 
- * //////////////////////
- */
-
-
 /**
  * This is the main execution class for the robot.
  * 
@@ -60,7 +49,7 @@ public class AutonomousRetrievalRobot {
 
 	
 	//wifi connection parameters
-	private static final String SERVER_IP = "192.168.2.11";
+	private static final String SERVER_IP = "192.168.2.2";
 	private static final int TEAM_NUMBER = 9;
 	private static final boolean ENABLE_DEBUG_WIFI_PRINT = true;
 
@@ -103,16 +92,17 @@ public class AutonomousRetrievalRobot {
 		usLocalizer = new UltrasonicLocalizer(usSampleProvider, leftMotor, rightMotor);
 		lightLocalizer = new LightLocalizer(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor);
 		ringDetection = new RingDetection(colorSampleProvider);
-		ringCont = new RingController(odometer, leftMotor, rightMotor, poleMotor, clawMotor, colorSampleProvider, leftSampleProvider, rightSampleProvider);
+		ringCont = new RingController(odometer, leftMotor, rightMotor, poleMotor, clawMotor, leftSampleProvider, rightSampleProvider);
 		
 	}
 	
-	@SuppressWarnings("rawtypes")
+
 	/**
 	 * This method connects to the server specified by the IP address variable and waits for 
 	 * the server to pass the game parameters for the round. It extracts the data and places
 	 * the data in the correct variable in the Navigation class.
 	 */
+	@SuppressWarnings("rawtypes")
 	private static void retrieveDataFromServer() {
 		
 		// Initialize WifiConnection class
@@ -166,20 +156,27 @@ public class AutonomousRetrievalRobot {
 	
 	
 	
-
+	/**
+	 * This method expects the pole to be in any position, and the claw medium motor to be
+	 * at the max rotated in the negative direction. It raises the pole until it stalls
+	 * where the motor stops and resets the tachometer count so that all movement afterwards
+	 * is with rotateTo. Expects the motor variables to be initialized and connected to the ports.
+	 */
+	public static void initializeHook() {
+		RingController.raisePole();
+		clawMotor.resetTachoCount();
+		clawMotor.rotateTo(RingController.CLAW_GRAB_ANGLE_FULL);
+	}
+	
+	
 	public static void main(String[] args) throws OdometerExceptions {
 		
-
-		
 		initialize(); 									//initialize class variables needed
-		Display.displayStartScreen(); 
 		
-		RingController.raisePole();
+		initializeHook();
 
-		clawMotor.rotate(110);
+		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		
-//		retrieveDataFromServer();						//connect to the server and wait to recieve variables
-//		
 		usLocalizer.fallingEdge();						//us localize
 		
 		lightLocalizer.localize(); 						//light localize
@@ -196,15 +193,7 @@ public class AutonomousRetrievalRobot {
 		
 		Navigation.travelTunnelToStart();
 		
+		RingController.dropRings();
 		
-		RingController.testGrab();
-		while(Button.waitForAnyPress() != Button.ID_ESCAPE) {
-			RingController.testGrab();
-		}
-
-
 	}
-	
-	
-
 }

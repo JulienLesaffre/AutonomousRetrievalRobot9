@@ -56,11 +56,11 @@ public class RingDetection {
 		float[] rgbValues = new float[3];
 		int ringsDetected = 0;
 		colorSample.fetchSample(rgbValues, 0);
-		if(rgbValues[0] > 0.010f)
+		if(rgbValues[0] > 0.0070f)
 			ringsDetected++;
-		if(rgbValues[1] > 0.010f)
+		if(rgbValues[1] > 0.0070f)
 			ringsDetected++;
-		if(rgbValues[2] > 0.010f)
+		if(rgbValues[2] > 0.0070f)
 			ringsDetected++;
 		
 		if(ringsDetected>= 2)

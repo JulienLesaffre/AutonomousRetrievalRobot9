@@ -1,8 +1,8 @@
 package ca.mcgill.ecse211.localizers;
 
-//import ca.mcgill.ecse211.ARR.Display;
 import ca.mcgill.ecse211.ARR.Navigation;
 import ca.mcgill.ecse211.odometer.*;
+import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.robotics.SampleProvider;
 
 
@@ -14,27 +14,47 @@ import lejos.robotics.SampleProvider;
  */
 public class UltrasonicLocalizer {
 
+	//constants
 	private static final int USLOC_MOTOR_SPEED = 170;
 	private static final int USLOC_MOTOR_ACCELERATION = 2000;
 	private static final int D_THRESHHOLD = 30;
 	private static final int NOISE_MARGIN = 5;
+	private static final int FILTER_OUT = 15;
+	
+	//us sensor variables
+	private int filterControl;
+	private float[] usData;
+	private static int distance;
+	
+	//sensors and motors
+	private static SampleProvider usSample;
+	private static EV3LargeRegulatedMotor rightMotor;
+	private static EV3LargeRegulatedMotor leftMotor;
+	
+	//localizing variables
 	private static double ALPHA = 0;
 	private static double BETA = 0;
-//	private static double FINAL_ANGLE = 0;
-	private static final int FILTER_OUT = 15;
-	private int filterControl;
-	public float[] usData;
-	public static int distance;
 	public static boolean isUSLocalizing = false;	
-	
-	private static SampleProvider usSample;
 
 
-	public UltrasonicLocalizer(SampleProvider usSampleProvider) {
+	/**
+	 * Class constructor
+	 * @param usSampleProvider The ultrasonic sample provider
+	 * @param lMotor Left motor instance
+	 * @param rMotor Right motor instance
+	 */
+	public UltrasonicLocalizer(SampleProvider usSampleProvider, EV3LargeRegulatedMotor lMotor, EV3LargeRegulatedMotor rMotor) {
 		usSample = usSampleProvider;
 		usData = new float[usSample.sampleSize()];
+		leftMotor = lMotor;
+		rightMotor = rMotor;
 	}
 
+	/**
+	 * This method is used to process the data from the ultrasonic sensor. It filters
+	 * out the very large values.
+	 * @param d
+	 */
 	public void processUSData(int d) {
 		// filter bad values
 		if (distance >= 255 && filterControl < FILTER_OUT) {
@@ -45,10 +65,6 @@ public class UltrasonicLocalizer {
 			filterControl = 0;
 			distance = d;
 		}
-//		// Print values for debugging
-//		if(UltrasonicLocalizer.isUSLocalizing) {
-//			Display.displayUSLocalization(distance, ALPHA, BETA, FINAL_ANGLE);
-//		} 
 	}
 
 	/**
@@ -86,14 +102,14 @@ public class UltrasonicLocalizer {
 			
 			// Move forward and get odometer data
 			odometer = Odometer.getOdometer().getXYT();
-			Navigation.leftMotor.forward();
-			Navigation.rightMotor.backward();
+			leftMotor.forward();
+			rightMotor.backward();
 
 			// If is falling and you are above the threshold
 			// then store theta as alpha and stop turning
 			if (isFalling(distance) && isAboveThresh) {
-				Navigation.leftMotor.stop(true);
-				Navigation.rightMotor.stop(false);
+				leftMotor.stop(true);
+				rightMotor.stop(false);
 				ALPHA = odometer[2];
 				isAboveThresh = false;
 				break;
@@ -108,8 +124,8 @@ public class UltrasonicLocalizer {
 			
 			// Go backwards and get odometer data
 			odometer = Odometer.getOdometer().getXYT();
-			Navigation.leftMotor.backward();
-			Navigation.rightMotor.forward();
+			leftMotor.backward();
+			rightMotor.forward();
 
 			// Set above thresh to true if you are above the threshold 
 			if (distance > (D_THRESHHOLD + NOISE_MARGIN)) {
@@ -119,8 +135,8 @@ public class UltrasonicLocalizer {
 			// If is falling and you are above the threshold
 			// then store 180-theta as beta and stop turning
 			if (isFalling(distance) && isAboveThresh) {
-				Navigation.leftMotor.stop(true);
-				Navigation.rightMotor.stop(false);
+				leftMotor.stop(true);
+				rightMotor.stop(false);
 				BETA = odometer[2];
 				break;
 			}
@@ -165,11 +181,11 @@ public class UltrasonicLocalizer {
 		while (true) {
 			usSample.fetchSample(usData, 0); // acquire data
 			processUSData((int) (usData[0] * 100.0)); // extract from buffer, cast to int, process data
-			Navigation.leftMotor.forward();
-			Navigation.rightMotor.backward();
+			leftMotor.forward();
+			rightMotor.backward();
 			if (distance > (D_THRESHHOLD + NOISE_MARGIN)) {
-				Navigation.leftMotor.stop(true);
-				Navigation.rightMotor.stop(false);
+				leftMotor.stop(true);
+				rightMotor.stop(false);
 				break;
 			}
 		}

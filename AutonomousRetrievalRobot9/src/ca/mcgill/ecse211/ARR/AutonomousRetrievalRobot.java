@@ -3,131 +3,197 @@
  */
 package ca.mcgill.ecse211.ARR;
 
+import ca.mcgill.ecse211.WiFiClient.WifiConnection;
 import ca.mcgill.ecse211.localizers.LightLocalizer;
 import ca.mcgill.ecse211.localizers.UltrasonicLocalizer;
 import ca.mcgill.ecse211.odometer.Odometer;
 import ca.mcgill.ecse211.odometer.OdometerExceptions;
-import lejos.hardware.Button;
 import lejos.hardware.ev3.LocalEV3;
-import lejos.hardware.lcd.TextLCD;
+import lejos.hardware.motor.EV3LargeRegulatedMotor;
+import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorModes;
 import lejos.robotics.SampleProvider;
+import java.util.Map;
+import lejos.hardware.Button;
 
-/*
-////////////////////////////////////
-/////////////// TODO ///////////////
- * check if turnto method works properly, it might do 360 turns because the odometer is already off and it thinks its heading another direction
- * add median filter for the light sensors
- * able to receive values from wifi **
- * running slowly, increase speed, if cant its because too much power on cpu
- * turn off sensors when not needed i.e. ultrasonic (i.e. do we nullify the SampleProvider or what?
- * watch out traveltowithcorrection also does a turn to
- * can test out going diagonally to the side of the tunnel and then "localizing"
-////////////////////////////////////
-*/
 
 
 /**
+ * This is the main execution class for the robot.
+ * 
  * @author JulienLesaffre
  * @author FouadBitar
  * 
- * This is the main execution class for the robot.
- * 
- * There are no polling classes that create threads so as to minimize the CPU load. The SampleProviders
- * are initialized in the main and are sent to the classes that want to use it. This is so that we use same
- * initialization.
- *
  */
 public class AutonomousRetrievalRobot {
 	
+	//associations
 	static Odometer odometer = null;
 	static Navigation nav = null;
-	static RingSet rs = null;
 	static UltrasonicLocalizer usLocalizer;
 	static LightLocalizer lightLocalizer;
-	
-	public static final TextLCD lcd = LocalEV3.get().getTextLCD();
+	static RingDetection ringDetection;
+	static RingController ringCont;
 
+	//sensors and motors
 	private static SampleProvider leftSampleProvider;
 	private static SampleProvider rightSampleProvider;
 	private static SampleProvider usSampleProvider;
+	private static SampleProvider colorSampleProvider;
+	private static EV3LargeRegulatedMotor rightMotor;
+	private static EV3LargeRegulatedMotor leftMotor;
+	private static EV3LargeRegulatedMotor poleMotor;
+	private static EV3MediumRegulatedMotor clawMotor;
+
+	
+	//wifi connection parameters
+	private static final String SERVER_IP = "192.168.2.2";
+	private static final int TEAM_NUMBER = 9;
+	private static final boolean ENABLE_DEBUG_WIFI_PRINT = true;
 
 
 	/**
-	 * method to start and run odometer thread
-	 * and initializes all the static class variables that the main program will use
-	 * in the correct order
-	 * 
+	 * Initializes the sensors and motors, starts odometer thread, and initializes class variables
+	 * with the proper sensors/motors they require. For example navigation, odometer, and localizers 
+	 * are given the motors. We initialize all the sensors and motors here so that all classes use the
+	 * same instance.
 	 * @throws OdometerExceptions
 	 */
 	@SuppressWarnings("resource")
 	private static void initialize() throws OdometerExceptions{
 		
-		odometer = Odometer.getOdometer(Navigation.leftMotor, Navigation.rightMotor, Navigation.TRACK, Navigation.WHEEL_RAD);
-
-		Thread odoThread = new Thread(odometer);
-		odoThread.start();
+		//motors
+		leftMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
+		rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
+		clawMotor = new EV3MediumRegulatedMotor(LocalEV3.get().getPort("B"));
+		poleMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("C"));
 		
-		//light samplers
+		//sensors
 		SensorModes myColorLeft = new EV3ColorSensor(LocalEV3.get().getPort("S2"));
 		leftSampleProvider = myColorLeft.getMode("Red");
 		SensorModes myColorRight = new EV3ColorSensor(LocalEV3.get().getPort("S3"));
 		rightSampleProvider = myColorRight.getMode("Red");
-		//us sampler 
 		SensorModes usSensor = new EV3UltrasonicSensor(LocalEV3.get().getPort("S1"));
-		usSampleProvider = usSensor.getMode("Distance");       
-
-		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer); 
-		rs = new RingSet(odometer, leftSampleProvider, rightSampleProvider);
-		//localizers
-		usLocalizer = new UltrasonicLocalizer(usSampleProvider);
-		lightLocalizer = new LightLocalizer(leftSampleProvider, rightSampleProvider);
+		usSampleProvider = usSensor.getMode("Distance");
+		SensorModes colorSensor = new EV3ColorSensor(LocalEV3.get().getPort("S4"));
+		colorSampleProvider = colorSensor.getMode("RGB");
+		
+		
+		//start odometer thread
+		odometer = Odometer.getOdometer(leftMotor, rightMotor, Navigation.TRACK, Navigation.WHEEL_RAD);
+		Thread odoThread = new Thread(odometer);
+		odoThread.start();
+		
+       
+		//initialize classes with required ev3 sensors and motors
+		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor, poleMotor, clawMotor); 
+		usLocalizer = new UltrasonicLocalizer(usSampleProvider, leftMotor, rightMotor);
+		lightLocalizer = new LightLocalizer(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor);
+		ringDetection = new RingDetection(colorSampleProvider);
+		ringCont = new RingController(odometer, leftMotor, rightMotor, poleMotor, clawMotor, leftSampleProvider, rightSampleProvider);
 		
 	}
 	
-	public static void fouadsMain() throws OdometerExceptions {
-		Display.displayStartScreen();
+
+	/**
+	 * This method connects to the server specified by the IP address variable and waits for 
+	 * the server to pass the game parameters for the round. It extracts the data and places
+	 * the data in the correct variable in the Navigation class.
+	 */
+	@SuppressWarnings("rawtypes")
+	private static void retrieveDataFromServer() {
 		
-		initialize(); 	//initialize class variables needed
+		// Initialize WifiConnection class
+		WifiConnection conn = new WifiConnection(SERVER_IP, TEAM_NUMBER, ENABLE_DEBUG_WIFI_PRINT);
+
+		// Connect to server and get the data, catching any errors that might occur
+		try {
+			
+			//waits till start button pushed
+			//can kill while waiting by pressing escape button
+			Map data = conn.getData();
+
+			//assign all the corresponding variables by retrieving the data
+			Navigation.RedTeam = ((Long) data.get("RedTeam")).intValue();
+			Navigation.GreenTeam = ((Long) data.get("GreenTeam")).intValue();
+			Navigation.RedCorner = ((Long) data.get("RedCorner")).intValue();
+			Navigation.GreenCorner = ((Long) data.get("GreenCorner")).intValue();
+			Navigation.Red_LL_x = ((Long) data.get("Red_LL_x")).intValue();
+			Navigation.Red_LL_y = ((Long) data.get("Red_LL_y")).intValue();
+			Navigation.Red_UR_x = ((Long) data.get("Red_UR_x")).intValue();
+			Navigation.Red_UR_y = ((Long) data.get("Red_UR_y")).intValue();
+			Navigation.Green_LL_x = ((Long) data.get("Green_LL_x")).intValue();
+			Navigation.Green_LL_y = ((Long) data.get("Green_LL_y")).intValue();
+			Navigation.Green_UR_x = ((Long) data.get("Green_UR_x")).intValue();
+			Navigation.Green_UR_y = ((Long) data.get("Green_UR_y")).intValue();
+			Navigation.Island_LL_x = ((Long) data.get("Island_LL_x")).intValue();
+			Navigation.Island_LL_y = ((Long) data.get("Island_LL_y")).intValue();
+			Navigation.Island_UR_x = ((Long) data.get("Island_UR_x")).intValue();
+			Navigation.Island_UR_y = ((Long) data.get("Island_UR_y")).intValue();
+			Navigation.TNR_LL_x = ((Long) data.get("TNR_LL_x")).intValue();
+			Navigation.TNR_LL_y = ((Long) data.get("TNR_LL_y")).intValue();
+			Navigation.TNR_UR_x = ((Long) data.get("TNR_UR_x")).intValue();
+			Navigation.TNR_UR_y = ((Long) data.get("TNR_UR_y")).intValue();
+			Navigation.TNG_LL_x = ((Long) data.get("TNG_LL_x")).intValue();
+			Navigation.TNG_LL_y = ((Long) data.get("TNG_LL_y")).intValue();
+			Navigation.TNG_UR_x = ((Long) data.get("TNG_UR_x")).intValue();
+			Navigation.TNG_UR_y = ((Long) data.get("TNG_UR_y")).intValue();
+			Navigation.TR_x = ((Long) data.get("TR_x")).intValue();
+			Navigation.TR_y = ((Long) data.get("TR_y")).intValue();
+			Navigation.TG_x = ((Long) data.get("TG_x")).intValue();
+			Navigation.TG_y = ((Long) data.get("TG_y")).intValue();
+
+		} catch (Exception e) {
+			//throws exception when: wrong IP, server not running, not connected to WIFI
+			//also throws exception if: recieves bad data, message from server, e.g. make sure TEAM numb correct
+			System.err.println("Error: " + e.getMessage());
+		}
+		// Wait until user decides to continue
+		Button.waitForAnyPress();
+	}
+	
+	
+	
+	/**
+	 * This method expects the pole to be in any position, and the claw medium motor to be
+	 * at the max rotated in the negative direction. It raises the pole until it stalls
+	 * where the motor stops and resets the tachometer count so that all movement afterwards
+	 * is with rotateTo. Expects the motor variables to be initialized and connected to the ports.
+	 */
+	public static void initializeHook() {
+		RingController.raisePole();
+		clawMotor.resetTachoCount();
+		clawMotor.rotateTo(RingController.CLAW_GRAB_ANGLE_FULL);
+	}
+	
+	
+	public static void main(String[] args) throws OdometerExceptions {
+		
+		initialize(); 									//initialize class variables needed
+		
+		initializeHook();
+
+		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		
 		usLocalizer.fallingEdge();						//us localize
 		
-		lightLocalizer.localize(Navigation.RedCorner); 	//light localize
+		lightLocalizer.localize(); 						//light localize
 		
-		Navigation.travelStartToTunnel();
+		Navigation.travelToTunnel(true);				//travel to and through tunnel
 		
-		Navigation.setSpeedAcceleration(200, 1500);
-		Navigation.moveStraight(Navigation.SQUARE_SIZE/2, true, false);
-		Navigation.turnTo(0);
-		Navigation.moveStraight(Navigation.SQUARE_SIZE*3.5, true, false);
+		Navigation.travelTunnelToRingSet();				//travel from tunnel to ring set
 		
+		RingController.detectAllRings();
 		
-//		//start loop of execution
-//		// 1) 
-	}
-	
-	public static void juliensMain() throws OdometerExceptions {
-//		Display.displayStartScreen(); 	
-		initialize(); 	//initialize class variables needed
-		RingSet.testRingSet();
-//		while (true) {
-//			int rgb = RingDetection.colorDetection();
-//		}
+		RingController.pickUpTwoRings();
 		
-
-
-	}
-	
-
-	public static void main(String[] args) throws OdometerExceptions {
-
-		juliensMain();	
+		Navigation.travelRingSetToTunnel();
 		
-
+		Navigation.travelTunnelToStart();
+		
+		RingController.dropRings();
 		
 	}
-
-
 }

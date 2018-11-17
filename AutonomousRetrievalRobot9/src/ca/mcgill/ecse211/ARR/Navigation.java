@@ -52,9 +52,9 @@ public class Navigation {
 	
 	//distance measurements
 	public static final double WHEEL_RAD = 2.2;
-	public static final double TRACK = 12.85;
+	public static final double TRACK = 13.5;
 	public static final double SQUARE_SIZE = 30.48;
-	public static final double SENSOR_OFFSET = 4.9;
+	public static final double SENSOR_OFFSET = 5.55;
 	public static final double RING_DETECTION_OFFSET = 21;
 	public static final double POLE_CENTER_OFFSET = 3.4;
 	public static final int RIGHT_ANGLE = 90;

@@ -15,10 +15,16 @@ import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorModes;
 import lejos.robotics.SampleProvider;
+
+import java.util.ArrayList;
 import java.util.Map;
 import lejos.hardware.Button;
 
-
+/*
+ * can ask in the correction algorithm, if the angle you are at on the odometer is not within 10 degrees +- of
+ * one of the right angles, then dont correct, turn the robot to the closest 90 degree angle and move out of the lines ways so that
+ * they do not mess up the odometer.
+ */
 
 /**
  * This is the main execution class for the robot.
@@ -44,7 +50,7 @@ public class AutonomousRetrievalRobot {
 	private static SampleProvider colorSampleProvider;
 	private static EV3LargeRegulatedMotor rightMotor;
 	private static EV3LargeRegulatedMotor leftMotor;
-	private static EV3LargeRegulatedMotor poleMotor;
+	private static EV3LargeRegulatedMotor dumpRingMotor;
 	private static EV3MediumRegulatedMotor clawMotor;
 
 	
@@ -68,7 +74,7 @@ public class AutonomousRetrievalRobot {
 		leftMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
 		rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
 		clawMotor = new EV3MediumRegulatedMotor(LocalEV3.get().getPort("B"));
-		poleMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("C"));
+		dumpRingMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("C"));
 		
 		//sensors
 		SensorModes myColorLeft = new EV3ColorSensor(LocalEV3.get().getPort("S2"));
@@ -88,11 +94,11 @@ public class AutonomousRetrievalRobot {
 		
        
 		//initialize classes with required ev3 sensors and motors
-		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor, poleMotor, clawMotor); 
+		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor, dumpRingMotor, clawMotor); 
 		usLocalizer = new UltrasonicLocalizer(usSampleProvider, leftMotor, rightMotor);
 		lightLocalizer = new LightLocalizer(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor);
 		ringDetection = new RingDetection(colorSampleProvider);
-		ringCont = new RingController(odometer, leftMotor, rightMotor, poleMotor, clawMotor, leftSampleProvider, rightSampleProvider);
+		ringCont = new RingController(odometer, leftMotor, rightMotor, dumpRingMotor, clawMotor, leftSampleProvider, rightSampleProvider);
 		
 	}
 	
@@ -162,20 +168,118 @@ public class AutonomousRetrievalRobot {
 	 * where the motor stops and resets the tachometer count so that all movement afterwards
 	 * is with rotateTo. Expects the motor variables to be initialized and connected to the ports.
 	 */
-	public static void initializeHook() {
-		RingController.raisePole();
+	public static void initializeMotors() {
+		dumpRingMotor.resetTachoCount();
 		clawMotor.resetTachoCount();
-		clawMotor.rotateTo(RingController.CLAW_GRAB_ANGLE_FULL);
+		clawMotor.setAcceleration(4000);
+		clawMotor.setSpeed(250);
 	}
 	
+	
+
+	public static void testRingGrab() {
+		Navigation.moveStraight(7, true, false);
+		clawMotor.setAcceleration(6000);
+		clawMotor.setSpeed(250);
+		clawMotor.rotate(135);
+		clawMotor.flt();
+		Navigation.moveStraight(7, false, false);
+		clawMotor.rotate(-135);
+		clawMotor.flt();
+
+	}
+
+	
+	public static void testClawAngle() {
+		while(Button.waitForAnyPress() != Button.ID_ESCAPE) {
+			clawMotor.rotateTo(0);
+			clawMotor.flt(true);
+			int buttonPress = Button.waitForAnyPress();
+			if(buttonPress == Button.ID_LEFT) {
+				clawMotor.rotateTo(135);
+			} else if(buttonPress == Button.ID_RIGHT) {
+				clawMotor.rotateTo(125);
+			} else if(buttonPress == Button.ID_DOWN) {
+				clawMotor.rotateTo(115);
+			} else if(buttonPress == Button.ID_UP) {
+				clawMotor.rotateTo(115);
+			}
+			buttonPress = Button.waitForAnyPress();
+			clawMotor.flt(true);
+		}
+	}
+	
+
+	
+	public static void testEntireRingGrabDrop() {
+		while(Button.waitForAnyPress() != Button.ID_ESCAPE) {
+			int buttonPress = Button.waitForAnyPress();
+			if(buttonPress == Button.ID_LEFT) {
+				RingController.dropRings();
+			} else if(buttonPress == Button.ID_RIGHT) {
+				testRingGrab();
+			}
+		}
+	}
+	
+	public static void testColorSensorAngleAndDetection() {
+		int button = Button.waitForAnyPress();
+		while(button != Button.ID_ESCAPE) {
+			if(button == Button.ID_LEFT) {
+				RingController.detectTopRings();
+				Button.waitForAnyPress();
+				RingController.detectColor();
+			} else {
+				RingController.detectBottomRings();
+				Button.waitForAnyPress();
+				RingController.detectColor();
+			}
+			button = Button.waitForAnyPress();
+		}
+	}
+	
+
+	public static void testColorDetection() {
+		int buttonPress;
+		float[] rgbValues = new float[colorSampleProvider.sampleSize()];
+		while(Button.waitForAnyPress() != Button.ID_ESCAPE) {
+			buttonPress = Button.waitForAnyPress();
+			if(buttonPress == Button.ID_LEFT) {
+				for (int i=0; i< 400; i++) {
+					colorSampleProvider.fetchSample(rgbValues, 0);
+					System.out.println("" + rgbValues[0] + "; " + rgbValues[1] + "; " + rgbValues[2]);
+				}
+			} else if(buttonPress == Button.ID_RIGHT) {
+				boolean ringAhead = RingDetection.isThereARing();
+				if(ringAhead) {
+					ArrayList<Integer> samples = new ArrayList<Integer>(300);
+					for(int i = 0; i < 300;i++) {
+						int colorCode = RingDetection.colorDetection();
+						samples.add(i, colorCode);
+					}
+					int mode = RingController.findMode(samples);
+					System.out.println("FINAL: //////" + mode + "//////");
+				} else {
+					System.out.println("no ring ahead");
+				}
+			}
+		}
+	}
 	
 	public static void main(String[] args) throws OdometerExceptions {
 		
 		initialize(); 									//initialize class variables needed
-		
-		initializeHook();
 
-		retrieveDataFromServer();						//connect to the server and wait to recieve variables
+		initializeMotors();
+		
+		System.out.println("ready");
+
+		clawMotor.rotateTo(135);
+		clawMotor.flt();
+
+		Button.waitForAnyPress();
+
+//		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		
 		usLocalizer.fallingEdge();						//us localize
 		
@@ -187,7 +291,7 @@ public class AutonomousRetrievalRobot {
 		
 		RingController.detectAllRings();
 		
-		RingController.pickUpTwoRings();
+//		RingController.pickUpTwoRings();
 		
 		Navigation.travelRingSetToTunnel();
 		

@@ -1,5 +1,6 @@
 package ca.mcgill.ecse211.ARR;
 
+import lejos.hardware.Button;
 import lejos.hardware.Sound;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
@@ -21,7 +22,7 @@ public class RingController {
 	private static Odometer odometer;
 	private static EV3LargeRegulatedMotor leftMotor;
 	private static EV3LargeRegulatedMotor rightMotor;
-	private static EV3LargeRegulatedMotor poleMotor;
+	private static EV3LargeRegulatedMotor dumpRingMotor;
 	private static EV3MediumRegulatedMotor clawMotor;
 	private static SampleProvider leftSampleProvider;
 	private static SampleProvider rightSampleProvider;
@@ -39,9 +40,10 @@ public class RingController {
 	//distance and angles
 	public static final int CLAW_GRAB_ANGLE_FULL = 130;
 	public static final int CLAW_GRAB_ANGLE_HALF = 60;
-	private static final int POLE_TOPRING_ANGLE = 45;
-	private static final int POLE_BOTTOMRING_ANGLE = 66;
-	private static final double POLE_JAB_DISTANCE = 5;
+	private static final int TOPRING_DETECTION_ANGLE = 73;
+	private static final int BOTTOMRING_DETECTION_ANGLE = 45;
+	
+	private static final int COLOR_SAMPLE_SIZE = 300;
 	
 	
 	
@@ -57,19 +59,19 @@ public class RingController {
 	 * @throws OdometerExceptions
 	 */
 	public RingController(Odometer odo, EV3LargeRegulatedMotor lMotor, EV3LargeRegulatedMotor rMotor, 
-			EV3LargeRegulatedMotor pMotor, EV3MediumRegulatedMotor cMotor, SampleProvider left, 
+			EV3LargeRegulatedMotor dumpMotor, EV3MediumRegulatedMotor cMotor, SampleProvider left, 
 			SampleProvider right) throws OdometerExceptions {
 		odometer = odo;
 		leftMotor = lMotor;
 		rightMotor = rMotor;
-		poleMotor = pMotor;
+		dumpRingMotor = dumpMotor;
 		clawMotor = cMotor;
 		leftSampleProvider = left;
 		rightSampleProvider = right;
 	}
 
 
-
+	/*
 	public static void pickUpTwoRings() throws OdometerExceptions {
 		poleMotor.rotateTo(0);
 		
@@ -124,6 +126,7 @@ public class RingController {
 		}
 		
 	}
+	*/
 	
 
 	//it gets the side of the ring set you are on
@@ -190,15 +193,43 @@ public class RingController {
 	 */
 	public static void detectAllRings() throws OdometerExceptions {
 		//turn so ring set is to the left of robot
-		Navigation.setupHeadingForDetection();
+		Navigation.setupHeadingForDetection();		//ege you need to comment this out for testing.
 		for(int i=0; i<4; i++) {
-			poleMotor.rotateTo(0);
+//			poleMotor.rotateTo(0);
 			Navigation.moveStraight(Navigation.RING_DETECTION_OFFSET, true, false);
 			Navigation.turnRobot(Navigation.RIGHT_ANGLE, false, false);
-			findLineAhead();
+//			findLineAhead();
 		}
 	}
+	
 
+	
+	public static int detectColor() {
+		
+		int mode = 0;
+		//check if there even is a ring
+		if(RingDetection.isThereARing()) {
+			
+			ArrayList<Integer> samples = new ArrayList<Integer>(COLOR_SAMPLE_SIZE);
+			
+			for(int i = 0; i < COLOR_SAMPLE_SIZE; i++) {
+				int colorCode = RingDetection.colorDetection();
+				samples.add(i, colorCode);
+			}
+			
+			mode = RingController.findMode(samples);
+		} 
+		//if 0, then there was no ring
+		//if -1, error 
+		//else gives the ring
+		System.out.println("color: " + mode);
+		return mode;
+	}
+	
+	
+	
+
+	/*
 	private static void findLineAhead() throws OdometerExceptions {
 		
 		int foundLeft = 0, foundRight = 0;						// Track how many lines found by left and right sensor
@@ -288,6 +319,7 @@ public class RingController {
 			Navigation.findLineStraight(true);
 		}
 	}
+	*/
 	
 
 	
@@ -302,6 +334,8 @@ public class RingController {
 	 * @param ringIsOnTop Whether the ring is on top
 	 * @param colorCode The color code of the ring
 	 */
+	
+	@SuppressWarnings("unused")
 	private static void saveRingDetection(boolean ringIsOnTop, int colorCode) {
 		//if robot is facing north, ringset is to west, so its east side
 		Side ringSide = Side.Null;
@@ -321,23 +355,7 @@ public class RingController {
 		}
 	}
 	
-	/**
-	 * First method called when robot starts, it raises the pole until it stalls then
-	 * resets the tachometer count.
-	 */
-	public static void raisePole() {
-		//make sure color sensor is at its highest
-		poleMotor.setAcceleration(500);
-		poleMotor.setSpeed(40);
-		poleMotor.rotate(-360, true);
-		while(true) {
-			if(poleMotor.isStalled()) {
-				poleMotor.stop(true);
-				break;
-			}
-		}
-		poleMotor.resetTachoCount();
-	}
+
 	
 	
 	/**
@@ -353,27 +371,56 @@ public class RingController {
 	}
 	
 	
+	//assumed there are a bunch of readings i.e. 300, if there is colors detected more than 
+	//40 times we increment a counter, if the counter has more than 1 number, it is an error and we need to alert this.
+	//it returns -1 for error
 	public static int findMode(ArrayList<Integer> samples) {
 		int [] data = new int[5];
+		int numberCount = 0;
 		for(Integer sample : samples)
 			data[sample]++;
-		int mode = 0, temp = data[1];
-		for(int i = 2; i < 5; i++){
+		int mode = 0, temp = data[0];
+		for(int i = 1; i < 5; i++){
+			if(data[i] > 20) numberCount++;
 			if(data[i] > temp){
 				mode = i;
 				temp = data[i];
 			}
 		}
-		return mode + 1;
+		if(numberCount > 1) 
+			return -1;				//error
+		else 
+			return mode;
 	}
 	
 	
-	/**
-	 * Drops the rings by rotating the pole to face downwards and the claw motor to be extended.
-	 */
+
+	
 	public static void dropRings() {
+		dumpRingMotor.rotateTo(45);
+		dumpRingMotor.rotateTo(0);
+		dumpRingMotor.rotateTo(65);
+		dumpRingMotor.rotateTo(0);
+	}
+	
+	public static void detectTopRings() {
 		clawMotor.rotateTo(0);
-		poleMotor.rotateTo(90);
+		clawMotor.flt();
+		dumpRingMotor.rotateTo(TOPRING_DETECTION_ANGLE);
+		dumpRingMotor.stop();
+		clawMotor.rotateTo(135);
+		clawMotor.flt();
+		dumpRingMotor.flt();
+	}
+	
+	public static void detectBottomRings() {
+		clawMotor.rotateTo(0);
+		clawMotor.flt();
+		dumpRingMotor.rotateTo(BOTTOMRING_DETECTION_ANGLE);
+		dumpRingMotor.stop();
+		clawMotor.rotateTo(135);
+		clawMotor.flt();
+		dumpRingMotor.flt();
 	}
 	
 	

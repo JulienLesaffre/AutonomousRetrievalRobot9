@@ -176,7 +176,7 @@ public class LightLocalizer {
 		// Move forward by length of offset
 		Navigation.moveStraight(Navigation.SENSOR_OFFSET, true, false);
 		// Turn left 90 degrees to face 0 degrees
-		Navigation.turnRobot(RIGHT_ANGLE, false, false);
+		Navigation.turnRobot(RIGHT_ANGLE, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
 		
 	}
 
@@ -224,7 +224,7 @@ public class LightLocalizer {
 		// Move forward by length of offset
 		Navigation.moveStraight(Navigation.SENSOR_OFFSET, true, false);
 		// Turn left 90 degrees to face 0 degrees
-		Navigation.turnRobot(RIGHT_ANGLE, true, false);
+		Navigation.turnRobot(RIGHT_ANGLE, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
 		
 	}
 	
@@ -314,7 +314,7 @@ public class LightLocalizer {
 
 		// Move forward by length of offset
 		Navigation.moveStraight(1.5, true, false);
-		Navigation.turnRobot(RIGHT_ANGLE, true, false);
+		Navigation.turnRobot(RIGHT_ANGLE, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
 		
 	}
 	

@@ -26,8 +26,12 @@ public class RingDetection {
 			return 2; 		//definitely green
 		} else if (G_R > 47.0) {
 			return 3;
-		} else 
+		} else if (G_R <= 47.0 && G_R > 0.0) {
 			return 4;
+		} else {
+			return 0;
+		}
+
 		
 	}
 	

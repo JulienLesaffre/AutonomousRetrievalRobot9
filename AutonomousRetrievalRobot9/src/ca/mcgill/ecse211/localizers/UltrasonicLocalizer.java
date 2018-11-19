@@ -168,7 +168,7 @@ public class UltrasonicLocalizer {
 		double newTheta = (odo.getXYT()[2] + dTheta) % 360;
 		odo.setTheta(newTheta);
 		int turnAngle = (int) (360.0 - (newTheta));
-		Navigation.turnRobot(turnAngle, true, false);
+		Navigation.turnRobot(turnAngle, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
 	}
 
 

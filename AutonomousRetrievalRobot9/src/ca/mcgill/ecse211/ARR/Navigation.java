@@ -2,9 +2,8 @@ package ca.mcgill.ecse211.ARR;
 
 import ca.mcgill.ecse211.odometer.*;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
-import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.robotics.SampleProvider;
-import java.util.ArrayList;
+
 
 /**
  * This class handles all movement of the robot, where motor initialization is private.
@@ -33,30 +32,32 @@ public class Navigation {
 	public static int TNR_LL_y = 3;
 	public static int TNR_UR_x = 4;
 	public static int TNR_UR_y = 5;
-	public static int TNG_LL_x = 3;
-	public static int TNG_LL_y = 2;
-	public static int TNG_UR_x = 5;
-	public static int TNG_UR_y = 3;
+	public static int TNG_LL_x = 2;
+	public static int TNG_LL_y = 3;
+	public static int TNG_UR_x = 3;
+	public static int TNG_UR_y = 5;
 	public static int TR_x = 6;
 	public static int TR_y = 6;
 	public static int TG_x = 6;
-	public static int TG_y = 4;
+	public static int TG_y = 6;
 	
 	//Speed and acceleration
-	private static final int ROTATE_SPEED = 100;
-	private static final int ROTATE_ACCEL = 500;
-	private static final int NAV_WITH_CORR_SPEED = 140;
-	private static final int NAV_WITH_CORR_ACCEL = 1000;
-	private static final int TUNNEL_SPEED = 160;
+	public static final int ROTATE_SPEED_SLOW = 80;
+	public static final int ROTATE_ACCEL_SLOW = 500;
+	public static final int ROTATE_SPEED_FAST = 150;
+	public static final int ROTATE_ACCEL_FAST = 1000;
+	private static final int NAV_WITH_CORR_SPEED = 240;
+	private static final int NAV_WITH_CORR_ACCEL = 1500;
+	private static final int TUNNEL_SPEED = 190;
 	private static final int TUNNEL_ACCEL = 1000;
 	
 	//distance measurements
 	public static final double WHEEL_RAD = 2.2;
-	public static final double TRACK = 13.5;
+	public static final double TRACK = 12.87;
 	public static final double SQUARE_SIZE = 30.48;
-	public static final double SENSOR_OFFSET = 5.55;
-	public static final double RING_DETECTION_OFFSET = 21;
-	public static final double POLE_CENTER_OFFSET = 3.4;
+	public static final double SENSOR_OFFSET = 5.9;
+	public static final double RING_DETECTION_DISTANCE_TOP = 4.4;
+	public static final double RING_DETECTION_DISTANCE_BOTTOM = 6.4;
 	public static final int RIGHT_ANGLE = 90;
 
 	//Association variables
@@ -68,11 +69,10 @@ public class Navigation {
 	private static EV3LargeRegulatedMotor rightMotor;
 	private static SampleProvider leftSampleProvider;
 	private static SampleProvider rightSampleProvider;
-	private static EV3LargeRegulatedMotor poleMotor;
-	private static EV3MediumRegulatedMotor clawMotor;
 	
 	//Class variables
 	private static boolean isTunnelVertical;
+	private static double[] targetCoordinate = new double[2];
 
 	
 	/**
@@ -83,15 +83,12 @@ public class Navigation {
 	 * @throws OdometerExceptions
 	 */
 	public Navigation(SampleProvider leftLight, SampleProvider rightLight, Odometer odo, 
-			EV3LargeRegulatedMotor lMotor,EV3LargeRegulatedMotor rMotor, EV3LargeRegulatedMotor pMotor, 
-			EV3MediumRegulatedMotor cMotor) throws OdometerExceptions {
+			EV3LargeRegulatedMotor lMotor,EV3LargeRegulatedMotor rMotor) throws OdometerExceptions {
 		odometer = odo;
 		leftSampleProvider = leftLight;
 		rightSampleProvider = rightLight;
 		leftMotor = lMotor;
 		rightMotor = rMotor;
-		poleMotor = pMotor;
-		clawMotor = cMotor;
 	}
 	
 	
@@ -130,8 +127,8 @@ public class Navigation {
 			if(isTunnelWithinOneTile(tunnelMidpoint[0], myX)) {
 				
 				//turn away from tunnel midpoint
-				if(tunnelMidpoint[0] < myX)	turnTo(90); 
-				else turnTo(270);
+				if(tunnelMidpoint[0] < myX)	turnTo(90, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST); 
+				else turnTo(270, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 				
 				//move forward by half a tile
 				moveStraight(SQUARE_SIZE/2, true, false);
@@ -142,10 +139,10 @@ public class Navigation {
 				//now travel along y axis to the y coordinate *one before* the tunnel midpoint
 				//travel north if tunnel y value is above on grid, else south
 				if(tunnelMidpoint[1] > myY) {
-					turnTo(0); 
+					turnTo(0, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST); 
 					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
 				} else {
-					turnTo(180);
+					turnTo(180, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
 				}
 				
@@ -154,8 +151,8 @@ public class Navigation {
 				myY = odometer.getXYT()[1];
 				
 				//turn to travel remaining x distance to center of tunnel
-				if(tunnelMidpoint[0] < myX) turnTo(270);
-				else turnTo(90);
+				if(tunnelMidpoint[0] < myX) turnTo(270, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
+				else turnTo(90, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 				
 			}
 			
@@ -164,10 +161,10 @@ public class Navigation {
 				
 				//turn towards x value of tunnel midpoint and travel to the point before it in one tile
 				if(tunnelMidpoint[0] < myX) {
-					turnTo(270); //turn to 270
+					turnTo(270, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST); //turn to 270
 					travelToWithCorrection(tunnelMidpoint[0]+SQUARE_SIZE, myY);
 				} else {
-					turnTo(90);
+					turnTo(90, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 					travelToWithCorrection(tunnelMidpoint[0]-SQUARE_SIZE, myY);
 				}
 				
@@ -177,10 +174,10 @@ public class Navigation {
 				//now travel along y axis to the y coordinate *one before* the tunnel midpoint
 				//travel north if tunnel y value is above on grid, else south
 				if(tunnelMidpoint[1] > myY) {
-					turnTo(0); //turn to 0 
+					turnTo(0, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST); //turn to 0 
 					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
 				} else {
-					turnTo(180);
+					turnTo(180, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
 				}
 				
@@ -189,8 +186,8 @@ public class Navigation {
 				myY = odometer.getXYT()[1];
 				
 				//turn towards tunnel x value
-				if(tunnelMidpoint[0] < myX) turnTo(270);
-				else turnTo(90);
+				if(tunnelMidpoint[0] < myX) turnTo(270, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
+				else turnTo(90, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 
 			}
 		} 
@@ -201,8 +198,8 @@ public class Navigation {
 			if(isTunnelWithinOneTile(tunnelMidpoint[1], myY)) {
 				
 				//turn away from tunnel midpoint y value
-				if(tunnelMidpoint[1] < myY) turnTo(0); 
-				else turnTo(180);
+				if(tunnelMidpoint[1] < myY) turnTo(0, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST); 
+				else turnTo(180, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 
 				//move forward by half a tile in y direction
 				moveStraight(SQUARE_SIZE/2, true, false);
@@ -213,10 +210,10 @@ public class Navigation {
 				
 				//then move in x direction to x value *just before* tunnel midpoint
 				if(tunnelMidpoint[0] < myX) {
-					turnTo(270);
+					turnTo(270, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 					travelToWithCorrection(tunnelMidpoint[0]+SQUARE_SIZE, myY);
 				} else {
-					turnTo(90);
+					turnTo(90, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 					travelToWithCorrection(tunnelMidpoint[0]-SQUARE_SIZE, myY);
 				}
 				
@@ -225,8 +222,8 @@ public class Navigation {
 				myY = odometer.getXYT()[1];
 				
 				//turn towards the y of the tunnel midpoint
-				if(tunnelMidpoint[1] < myY) turnTo(180);
-				else turnTo(0);
+				if(tunnelMidpoint[1] < myY) turnTo(180, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
+				else turnTo(0, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 				
 				
 			} 
@@ -236,10 +233,10 @@ public class Navigation {
 				
 				//turn towards y value of tunnel midpoint and travel to the point before it in one tile
 				if(tunnelMidpoint[1] < myY) {
-					turnTo(180); 
+					turnTo(180, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST); 
 					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
 				} else {
-					turnTo(0);
+					turnTo(0, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
 				}
 
@@ -248,10 +245,10 @@ public class Navigation {
 				
 				//move towards x value *just before* tunnel midpoint 
 				if(tunnelMidpoint[0] < myX) {
-					turnTo(270); 
+					turnTo(270, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST); 
 					travelToWithCorrection(tunnelMidpoint[0]+SQUARE_SIZE, myY);
 				} else {
-					turnTo(90);
+					turnTo(90, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 					travelToWithCorrection(tunnelMidpoint[0]-SQUARE_SIZE, myY);
 				}
 				
@@ -260,14 +257,14 @@ public class Navigation {
 				myY = odometer.getXYT()[1];
 				
 				//turn towards tunnel y value
-				if(tunnelMidpoint[1] < myY) turnTo(180);
-				else  turnTo(0);
+				if(tunnelMidpoint[1] < myY) turnTo(180, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
+				else  turnTo(0, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 				
 			}
 		}
 		
 		//now correct correct with second line essentially localizing
-		findLineStraight(true);
+		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 		
 		//move to tunnel center
 		moveStraight(SQUARE_SIZE/2, true, false);
@@ -277,19 +274,15 @@ public class Navigation {
 		myX = odometer.getXYT()[0];
 		myY = odometer.getXYT()[1];
 		double absAngle = Math.toDegrees(Math.atan2((tunnelMidpoint[0] - myX), (tunnelMidpoint[1] - myY)));
-		turnTo(absAngle); 
+		turnTo(absAngle, ROTATE_SPEED_SLOW, ROTATE_ACCEL_SLOW); 
 		
-		poleMotor.rotateTo(45);
-		clawMotor.rotateTo(0);
-		
-		
+
 		setSpeedAcceleration(TUNNEL_SPEED, TUNNEL_ACCEL);
 		moveStraight(SQUARE_SIZE * 3.3, true, false);
 		
-		poleMotor.rotateTo(0);
-		clawMotor.rotateTo(RingController.CLAW_GRAB_ANGLE_FULL);
-		
-		findLineStraight(true);
+
+		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 	}
 	
 	
@@ -310,7 +303,6 @@ public class Navigation {
 		
 		String heading = getCurrentHeading();
 		double[] tunnelEndMidpoint = findTunnelMidpoint(false);
-		double[] targetCoordinate = new double[2];
 
 		//if ring is to left, go to tile intersection to the right of it relative to robot position
 		//else if ring is right, go to tile intersection below it relative to robot position
@@ -328,113 +320,69 @@ public class Navigation {
 			travelToWithCorrection(targetCoordinate[0], tunnelEndMidpoint[1]);
 
 		//now move other axis to reach bottomRightTile
+		
 		travelToWithCorrection(targetCoordinate[0], targetCoordinate[1]);
 	}
 	
-	
-	//expects the robot to be on one of 4 grid intersections around the ringset
-	public static void travelRingSetToTunnel() throws OdometerExceptions {
-		
-		//find closest corner tile
-		int ringSetY;
-		if(RedTeam == 9) 
-			ringSetY = TR_y;
-		else 
-			ringSetY = TG_y;
-		
-		poleMotor.rotateTo(0);
-		clawMotor.rotateTo(RingController.CLAW_GRAB_ANGLE_FULL);
-		
-		double[] targetCoordinate = new double[2];
-		if(isRingSetToLeft())
-			targetCoordinate = getTargetCoordinate(true);
-		else 
-			targetCoordinate = getTargetCoordinate(false);
-		
-		System.out.println("x: " + targetCoordinate[0] + ", y: " + targetCoordinate[1]);
-	
-		double myX = odometer.getXYT()[0];
-		double myY = odometer.getXYT()[1];
-		
-		//if distance from nearest grid intersection to target coordinate is larger than 45, need to do one extra movement
-		double distanceToTarget = Math.hypot(targetCoordinate[0] - myX, targetCoordinate[1] - myY);
-		if(distanceToTarget > 44.0) {
-			System.out.println("entered above 45");
-			setupHeadingForDetection();
-			findLineStraight(true);
-			turnRobot(RIGHT_ANGLE, false, false);
-			findLineStraight(true);
+	public static void ringSetToTunnel() throws OdometerExceptions {
+		Navigation.setupHeadingForDetection(false);	
+		while(!hasArrived(targetCoordinate[0], targetCoordinate[1])) {
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+			turnRobot(90, false, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 		}
 		
-		myX = odometer.getXYT()[0];
-		myY = odometer.getXYT()[1];
-
-
-		
-		if((int) Math.round(myY/SQUARE_SIZE) != ringSetY) { //travel x first
-			travelToWithCorrection(targetCoordinate[0], myY);
-			travelToWithCorrection(targetCoordinate[0], targetCoordinate[1]);
-			System.out.println("reached target");
-		} else {
-			travelToWithCorrection(myX, targetCoordinate[1]);
-			travelToWithCorrection(targetCoordinate[0], targetCoordinate[1]);
-			System.out.println("reached target");
-		}
 		
 		
 		//now it should be where it first started, now go to closest upper tile to midpoint point
-		
+		double myX = odometer.getXYT()[0];
+		double myY = odometer.getXYT()[1];
 		myX = odometer.getXYT()[0];
 		myY = odometer.getXYT()[1];
 		double[] destination = findClosestTunnelSideCoordinates();
-		if(isTunnelVertical) {
-			travelToWithCorrection(destination[0], myY);
-			travelToWithCorrection(destination[0], destination[1]);
-			System.out.println("reached tunnel side");
-		} else {
-			travelToWithCorrection(myX, destination[1]);
-			travelToWithCorrection(destination[0], destination[1]);
-			System.out.println("reached tunnel side");
-		}
-		
 		double[] tunnelExitMidpoint = findTunnelMidpoint(false);
 		System.out.println("tunnelMidpoint: " + tunnelExitMidpoint[0] + ", " + tunnelExitMidpoint[1]);
 		double[] tunnelExitMidpointPlusOne = findTunnelExitMidpointPlusTile();
 		System.out.println("tunnelPlusOne: " + tunnelExitMidpointPlusOne[0] + ", " + tunnelExitMidpointPlusOne[1]);
+
 		
-		
+		//if distance from nearest grid intersection to target coordinate is larger than 45, need to do one extra movement
+		double distanceToTunnel = Math.hypot(tunnelExitMidpointPlusOne[0] - myX, tunnelExitMidpointPlusOne[1] - myY);
+		if(distanceToTunnel > SQUARE_SIZE) {
+			if(!isTunnelVertical) {
+				travelToWithCorrection(destination[0], myY);
+				travelToWithCorrection(destination[0], destination[1]);
+				System.out.println("reached tunnel side - vertical");
+			} else {
+				travelToWithCorrection(myX, destination[1]);
+				travelToWithCorrection(destination[0], destination[1]);
+				System.out.println("reached tunnel side - horizontal");
+			}
+		}
 
 		myX = odometer.getXYT()[0];
 		myY = odometer.getXYT()[1];
-		
 		if(isTunnelVertical) {
 			travelToWithCorrection(tunnelExitMidpointPlusOne[0], myY);
 			travelToWithCorrection(tunnelExitMidpointPlusOne[0], tunnelExitMidpointPlusOne[1]);
-			System.out.println("reached tunnel plus one");
+			System.out.println("reached tunnel side - vertical");
 		} else {
 			travelToWithCorrection(myX, tunnelExitMidpointPlusOne[1]);
 			travelToWithCorrection(tunnelExitMidpointPlusOne[0], tunnelExitMidpointPlusOne[1]);
-			System.out.println("reached tunnel plus one");
+			System.out.println("reached tunnel side - horizontal");
 		}
-		
 
-
-		myX = odometer.getXYT()[0];
-		myY = odometer.getXYT()[1];
 		
-		poleMotor.rotateTo(0);
-		poleMotor.rotateTo(40);
-		clawMotor.rotateTo(0);
+		turnToCoord(tunnelExitMidpoint[0], tunnelExitMidpoint[1], ROTATE_SPEED_SLOW, ROTATE_ACCEL_SLOW);
 
-		travelToWithCorrection(tunnelExitMidpoint[0], tunnelExitMidpoint[1]);
-		
 		setSpeedAcceleration(TUNNEL_SPEED, TUNNEL_ACCEL);
-		moveStraight(SQUARE_SIZE * 2.4, true, false);
-		poleMotor.rotate(0);
-		clawMotor.rotateTo(RingController.CLAW_GRAB_ANGLE_FULL);
-		findLineStraight(true);
+		moveStraight(SQUARE_SIZE * 3.3, true, false);
+		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 		
+			
+
 	}
+	
 	
 	public static double[] findTunnelExitMidpointPlusTile() {
 		double[] tunnelStartMidpoint = findTunnelMidpoint(true);
@@ -499,36 +447,37 @@ public class Navigation {
 		return tileCoordinates;
 	}
 	
+	//TODO
 	public static void travelTunnelToStart() throws OdometerExceptions {
-		double[] tunnelStartMidpoint = findTunnelMidpoint(true);
+
+		
+
 		double startCornerCoordX = -1, startCornerCoordY = 1;
 		int startingCorner = RedTeam == 9 ? RedCorner : GreenCorner;
 		switch(startingCorner) {
 		case 0:
-			startCornerCoordX = 1;
-			startCornerCoordY = 1;
+			startCornerCoordX = 1*SQUARE_SIZE;
+			startCornerCoordY = 1*SQUARE_SIZE;
 			break;
 		case 1:
-			startCornerCoordX = 7;
-			startCornerCoordY = 1;
+			startCornerCoordX = 7*SQUARE_SIZE;
+			startCornerCoordY = 1*SQUARE_SIZE;
 			break;
 		case 2:
-			startCornerCoordX = 7;
-			startCornerCoordY = 7;
+			startCornerCoordX = 7*SQUARE_SIZE;
+			startCornerCoordY = 7*SQUARE_SIZE;
 			break;
 		case 3:
-			startCornerCoordX = 1;
-			startCornerCoordY = 7;
+			startCornerCoordX = 1*SQUARE_SIZE;
+			startCornerCoordY = 7*SQUARE_SIZE;
 			break;
 		}
-		if(isTunnelVertical) {
-			travelToWithCorrection(startCornerCoordX, tunnelStartMidpoint[1]);
-			travelToWithCorrection(startCornerCoordX, startCornerCoordY);
-		} else {
-			travelToWithCorrection(tunnelStartMidpoint[0], startCornerCoordY);
-			travelToWithCorrection(startCornerCoordX, startCornerCoordY);
-		}
-		
+		double myX = odometer.getXYT()[0];
+		double myY = odometer.getXYT()[1];
+		turnToCoord(startCornerCoordX, startCornerCoordY, ROTATE_SPEED_SLOW, ROTATE_ACCEL_SLOW);
+		double distance = Math.hypot(startCornerCoordX - myX, startCornerCoordY - myY);
+		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+		moveStraight(distance, true, false);
 	}
 	
 	
@@ -540,7 +489,7 @@ public class Navigation {
 	 * around the ring set. It turns the robot so that the ring set is facing the left
 	 * of the robot, setting it up for ring detection.
 	 */
-	public static void setupHeadingForDetection() {
+	public static void setupHeadingForDetection(boolean straightAhead) {
 		int ringSetX, ringSetY;
 		
 		if(RedTeam == 9) {
@@ -556,14 +505,21 @@ public class Navigation {
 		int x = (int) Math.round(myX);
 		int y = (int) Math.round(myY);
 		
+		int angle1 = 180, angle2 = 0, angle3 = 90, angle4 = 270;
+		if(straightAhead) {
+			angle1 = 90;
+			angle2 = 270;
+			angle3 = 0;
+			angle4 = 180;
+		}
 		if(ringSetX > x) 
-			turnTo(180);
+			turnTo(angle1, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 		else if(ringSetX < x)
-			turnTo(0);
+			turnTo(angle2, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 		else if(ringSetY > y)
-			turnTo(90);
+			turnTo(angle3, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 		else if(ringSetY < y)
-			turnTo(270);
+			turnTo(angle4, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 		
 		
 	}
@@ -713,7 +669,7 @@ public class Navigation {
 			// Get absolute angle the robot must be facing
 			absAngle = Math.toDegrees(Math.atan2(deltaX, deltaY));
 
-			turnTo(absAngle); 
+			turnTo(absAngle, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST); 
 			
 			
 			setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
@@ -964,7 +920,7 @@ public class Navigation {
 	 * This method find the first line ahead when starting the localization.
 	 * @throws OdometerExceptions
 	 */
-	public static void findLineStraight(boolean forwards) throws OdometerExceptions {
+	public static void findLineStraight(boolean forwards, int speed, int acceleration) throws OdometerExceptions {
 		
 		float[] newColorLeft = {0};
 		float oldSampleLeft = 0;
@@ -974,7 +930,7 @@ public class Navigation {
 		int foundLeft = 0;
 		int foundRight = 0;
 		
-		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+		setSpeedAcceleration(speed, acceleration);
 
 		if(forwards) {
 			leftMotor.forward();
@@ -1017,7 +973,7 @@ public class Navigation {
 	
 	
 	
-	
+	/*
 	public static void testFiniteDifferencesLightSensor() {
 		System.out.println("hello");
 		int window = 6;
@@ -1114,13 +1070,16 @@ public class Navigation {
 		}
 		
 	}
+	*/
 	
+	/*
 	public static float average(ArrayList<Float> samples) {
 		float sum = 0;
 		for(Float sample : samples)
 		    sum += sample;
 		return sum/samples.size();
 	}
+	*/
 
 
 	
@@ -1129,10 +1088,10 @@ public class Navigation {
 	 * theta. This method should turn a MINIMAL angle to its target.
      * @param theta : theta angle
      */
-	public static void turnTo(double theta) {
+	public static void turnTo(double theta, int speed, int accel) {
 		double dTheta = theta - odometer.getXYT()[2];
 		if(dTheta < 0) dTheta += 360;
-		setSpeedAcceleration(ROTATE_SPEED, ROTATE_ACCEL);
+		setSpeedAcceleration(speed, accel);
 
 		if (dTheta > 180) { // turn left
 			leftMotor.rotate(-convertAngle(360 - dTheta), true);
@@ -1150,14 +1109,13 @@ public class Navigation {
 	 * @param x
 	 * @param y
 	 */
-	public static void turnToCoord(double x, double y) {
+	public static void turnToCoord(double x, double y, int speed, int accel) {
 		double x0 = odometer.getXYT()[0];
 		double y0 = odometer.getXYT()[1];
-		double theta0 = odometer.getXYT()[2];
 		double xVector = x - x0;
 		double yVector = y - y0;
 		double thetaVector = Math.toDegrees(Math.atan2(xVector, yVector));
-		turnTo(thetaVector - theta0);
+		turnTo(thetaVector, speed, accel);
 	}
 	
 
@@ -1181,7 +1139,8 @@ public class Navigation {
 	 * @param degrees: degrees to turn by
 	 * @param direction: true means turn right, left otherwise
 	 */
-	public static void turnRobot(int degrees, boolean direction, boolean continueRunning) {
+	public static void turnRobot(int degrees, boolean direction, boolean continueRunning, int speed, int accel) {
+		setSpeedAcceleration(speed, accel);
 		int i = 1;
 		if (!direction) i = -1;
 		leftMotor.rotate(i * convertAngle(degrees), true);

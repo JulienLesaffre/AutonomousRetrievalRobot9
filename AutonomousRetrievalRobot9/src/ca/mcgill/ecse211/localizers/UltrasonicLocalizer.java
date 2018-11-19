@@ -1,5 +1,6 @@
 package ca.mcgill.ecse211.localizers;
 
+
 import ca.mcgill.ecse211.ARR.Navigation;
 import ca.mcgill.ecse211.odometer.*;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
@@ -30,6 +31,7 @@ public class UltrasonicLocalizer {
 	private static SampleProvider usSample;
 	private static EV3LargeRegulatedMotor rightMotor;
 	private static EV3LargeRegulatedMotor leftMotor;
+	private static Odometer odo;
 	
 	//localizing variables
 	private static double ALPHA = 0;
@@ -43,11 +45,13 @@ public class UltrasonicLocalizer {
 	 * @param lMotor Left motor instance
 	 * @param rMotor Right motor instance
 	 */
-	public UltrasonicLocalizer(SampleProvider usSampleProvider, EV3LargeRegulatedMotor lMotor, EV3LargeRegulatedMotor rMotor) {
+	public UltrasonicLocalizer(Odometer odometer, SampleProvider usSampleProvider, EV3LargeRegulatedMotor lMotor, EV3LargeRegulatedMotor rMotor) {
 		usSample = usSampleProvider;
 		usData = new float[usSample.sampleSize()];
 		leftMotor = lMotor;
 		rightMotor = rMotor;
+		odo = odometer;
+		
 	}
 
 	/**
@@ -83,16 +87,26 @@ public class UltrasonicLocalizer {
 //		double angleCorrection = 0;
 		Odometer.getOdometer().setTheta(0);
 		
+		
+		float sum = 0;
+		for(int i=0; i < 100; i++) {
+			usSample.fetchSample(usData, 0); // acquire data
+			distance = (int) (usData[0] * 100.0); // extract from buffer, cast to int
+			sum += distance;
+		}
+		if(sum/100 < (D_THRESHHOLD + NOISE_MARGIN)) {
+			findWallAbove();
+			isAboveThresh = true;
+		} else {
+			isAboveThresh = true;
+		}
+		
+
+		
 		usSample.fetchSample(usData, 0); // acquire data
 		distance = (int) (usData[0] * 100.0); // extract from buffer, cast to int
 
-		// Checks orientation or sets orientation to perform localization
-		if (distance > (D_THRESHHOLD + NOISE_MARGIN)) {
-			isAboveThresh = true;
-		} else {
-			findWallAbove();
-			isAboveThresh = true;
-		}
+
 
 		// Find first falling edge
 		while (true) {
@@ -142,7 +156,7 @@ public class UltrasonicLocalizer {
 			}
 		}
 
-		double dTheta = 225.0 - (ALPHA+BETA)/2.0;
+		double dTheta = 225.0 - ((ALPHA+BETA)/2.0);
 		correctAngle(dTheta);
 		
 		
@@ -178,14 +192,28 @@ public class UltrasonicLocalizer {
 	 * before you read for falling edge
 	 */
 	void findWallAbove() {
+		int count = 0;
 		while (true) {
 			usSample.fetchSample(usData, 0); // acquire data
 			processUSData((int) (usData[0] * 100.0)); // extract from buffer, cast to int, process data
 			leftMotor.forward();
 			rightMotor.backward();
-			if (distance > (D_THRESHHOLD + NOISE_MARGIN)) {
+			if(distance > 100)
+				count++;
+			if (count >= 20) {
 				leftMotor.stop(true);
 				rightMotor.stop(false);
+				leftMotor.resetTachoCount();
+				rightMotor.resetTachoCount();
+				// Reset the values of x, y and z to 0
+				odo.setXYT(0, 0, 0);
+
+				odo.leftMotorTachoCount = 0;
+				odo.rightMotorTachoCount = 0;
+
+				// added by me
+				odo.lastLeftMotorTachoCount = 0;
+				odo.lastRightMotorTachoCount = 0;
 				break;
 			}
 		}

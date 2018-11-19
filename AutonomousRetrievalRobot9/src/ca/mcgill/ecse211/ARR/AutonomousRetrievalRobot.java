@@ -26,7 +26,9 @@ import lejos.hardware.Button;
  * 
  * 
  * 
- * make turns all fast except for color detection and turning for tunnel
+ * faster localization turns
+ * dont go back to line if already detected
+ * turning for picking up is too slow
  */
 
 /**
@@ -100,7 +102,7 @@ public class AutonomousRetrievalRobot {
        
 		//initialize classes with required ev3 sensors and motors
 		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor); 
-		usLocalizer = new UltrasonicLocalizer(usSampleProvider, leftMotor, rightMotor);
+		usLocalizer = new UltrasonicLocalizer(odometer, usSampleProvider, leftMotor, rightMotor);
 		lightLocalizer = new LightLocalizer(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor);
 		ringDetection = new RingDetection(colorSampleProvider);
 		ringCont = new RingController(dumpRingMotor, clawMotor);
@@ -180,8 +182,6 @@ public class AutonomousRetrievalRobot {
 	}
 	
 	
-
-	
 	public static void main(String[] args) throws OdometerExceptions {
 		
 		initialize(); 									//initialize class variables needed
@@ -194,7 +194,6 @@ public class AutonomousRetrievalRobot {
 		System.out.println("ready");
 
 		Button.waitForAnyPress();
-		
 
 //		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		
@@ -206,6 +205,7 @@ public class AutonomousRetrievalRobot {
 		
 		Navigation.travelTunnelToRingSet();				//travel from tunnel to ring set
 		
+
 		RingController.detectAllRings();
 		
 		RingController.pickUpRings();

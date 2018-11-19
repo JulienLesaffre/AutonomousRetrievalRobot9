@@ -15,7 +15,7 @@ public class Navigation {
 	public static int RedTeam = -1; 		
 	public static int GreenTeam = 9; 
 	public static int RedCorner = -1; 
-	public static int GreenCorner = 0;
+	public static int GreenCorner = 2;
 	public static int Red_LL_x = -1;
 	public static int Red_LL_y = -1;
 	public static int Red_UR_x = -1;
@@ -32,19 +32,19 @@ public class Navigation {
 	public static int TNR_LL_y = 3;
 	public static int TNR_UR_x = 4;
 	public static int TNR_UR_y = 5;
-	public static int TNG_LL_x = 2;
-	public static int TNG_LL_y = 3;
-	public static int TNG_UR_x = 3;
-	public static int TNG_UR_y = 5;
+	public static int TNG_LL_x = 5;
+	public static int TNG_LL_y = 4;
+	public static int TNG_UR_x = 6;
+	public static int TNG_UR_y = 6;
 	public static int TR_x = 6;
 	public static int TR_y = 6;
-	public static int TG_x = 6;
-	public static int TG_y = 6;
+	public static int TG_x = 2;
+	public static int TG_y = 2;
 	
 	//Speed and acceleration
 	public static final int ROTATE_SPEED_SLOW = 80;
 	public static final int ROTATE_ACCEL_SLOW = 500;
-	public static final int ROTATE_SPEED_FAST = 150;
+	public static final int ROTATE_SPEED_FAST = 170;
 	public static final int ROTATE_ACCEL_FAST = 1000;
 	private static final int NAV_WITH_CORR_SPEED = 240;
 	private static final int NAV_WITH_CORR_ACCEL = 1500;
@@ -55,9 +55,9 @@ public class Navigation {
 	public static final double WHEEL_RAD = 2.2;
 	public static final double TRACK = 12.87;
 	public static final double SQUARE_SIZE = 30.48;
-	public static final double SENSOR_OFFSET = 5.9;
+	public static final double SENSOR_OFFSET = 6.1;
 	public static final double RING_DETECTION_DISTANCE_TOP = 4.4;
-	public static final double RING_DETECTION_DISTANCE_BOTTOM = 6.4;
+	public static final double RING_DETECTION_DISTANCE_BOTTOM = 6.0;
 	public static final int RIGHT_ANGLE = 90;
 
 	//Association variables
@@ -161,7 +161,7 @@ public class Navigation {
 				
 				//turn towards x value of tunnel midpoint and travel to the point before it in one tile
 				if(tunnelMidpoint[0] < myX) {
-					turnTo(270, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST); //turn to 270
+//					turnTo(270, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST); //turn to 270
 					travelToWithCorrection(tunnelMidpoint[0]+SQUARE_SIZE, myY);
 				} else {
 					turnTo(90, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
@@ -177,7 +177,7 @@ public class Navigation {
 					turnTo(0, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST); //turn to 0 
 					travelToWithCorrection(myX, tunnelMidpoint[1]-SQUARE_SIZE);
 				} else {
-					turnTo(180, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
+//					turnTo(180, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
 				}
 				
@@ -688,20 +688,23 @@ public class Navigation {
 				rightMotor.forward();
 
 				int foundLeft = 0; int foundRight = 0;
-				
+
 				while(true) {
 					// Get color sensor readings
 					leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
 					rightSampleProvider.fetchSample(newColorRight, 0); 
-
+					System.out.println("left: " + newColorLeft[0] + ", right: " + newColorRight[0]);
+					
 					// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
-					if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
+					if((newColorLeft[0]) < 0.28 && oldSampleLeft > 0.28 && foundLeft == 0) {
 						leftMotor.stop(true);
+						System.out.println("detected left ^");
 						foundLeft++;
 					}
 					// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-					if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
+					if((newColorRight[0]) < 0.28 && oldSampleRight > 0.28 && foundRight == 0) {
 						rightMotor.stop(true);
+						System.out.println("detected right ^");
 						foundRight++;
 					}
 					// Store last color samples
@@ -713,6 +716,7 @@ public class Navigation {
 						break;
 					}
 				}
+				
 				//perform correction of odometer here when sensors are on top of lines
 				correctOdometer();
 				moveStraight(SENSOR_OFFSET, true, false);
@@ -725,7 +729,8 @@ public class Navigation {
 			}	
 		}
 	}
-	
+
+
 	
 	/**
 	 * Checks if the robot is within a certain distance from a destination.
@@ -971,115 +976,6 @@ public class Navigation {
 		moveStraight(SENSOR_OFFSET, true, false);
 	}
 	
-	
-	
-	/*
-	public static void testFiniteDifferencesLightSensor() {
-		System.out.println("hello");
-		int window = 6;
-		ArrayList<Float> currentSamplesLeft = new ArrayList<Float>();
-		ArrayList<Float> currentSamplesRight = new ArrayList<Float>();
-		float[] newColorLeft = new float[leftSampleProvider.sampleSize()];
-		float[] newColorRight = new float[rightSampleProvider.sampleSize()];
-		leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
-		rightSampleProvider.fetchSample(newColorRight, 0); 
-		currentSamplesLeft.add(newColorLeft[0]);
-		currentSamplesRight.add(newColorRight[0]);
-		leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
-		rightSampleProvider.fetchSample(newColorRight, 0); 
-		currentSamplesLeft.add(newColorLeft[0]);
-		currentSamplesRight.add(newColorRight[0]);
-		leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
-		rightSampleProvider.fetchSample(newColorRight, 0); 
-		currentSamplesLeft.add(newColorLeft[0]);
-		currentSamplesRight.add(newColorRight[0]);
-		leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
-		rightSampleProvider.fetchSample(newColorRight, 0); 
-		currentSamplesLeft.add(newColorLeft[0]);
-		currentSamplesRight.add(newColorRight[0]);
-		leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
-		rightSampleProvider.fetchSample(newColorRight, 0); 
-		currentSamplesLeft.add(newColorLeft[0]);
-		currentSamplesRight.add(newColorRight[0]);
-		leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
-		rightSampleProvider.fetchSample(newColorRight, 0); 
-		currentSamplesLeft.add(newColorLeft[0]);
-		currentSamplesRight.add(newColorRight[0]);
-
-		
-
-		float oldAverageLeft = average(currentSamplesLeft);
-		float sample_k_n_left = currentSamplesLeft.remove(0);
-		float oldAverageRight = average(currentSamplesRight); 
-		float sample_k_n_right = currentSamplesRight.remove(0);
-		
-		leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
-		rightSampleProvider.fetchSample(newColorRight, 0); 
-		currentSamplesLeft.add(newColorLeft[0]);
-		currentSamplesRight.add(newColorRight[0]);
-		
-		float newAverageLeft = oldAverageLeft + (1/window)*(newColorLeft[0]-sample_k_n_left);
-		float newAverageRight = oldAverageRight + (1/window)*(newColorLeft[0]-sample_k_n_right);
-		
-		
-//
-//		System.out.println("" + oldAverageLeft + ", " + oldAverageRight);
-//		System.out.println("" + newAverageLeft + ", " + newAverageRight);
-		setSpeedAcceleration(150, 500);
-
-		leftMotor.forward();
-		rightMotor.forward();
-		
-		int foundLeft = 0; int foundRight = 0;
-		
-		while(true) {
-			// Get color sensor readings
-			leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
-			rightSampleProvider.fetchSample(newColorRight, 0); 
-			
-			
-			sample_k_n_left = currentSamplesLeft.remove(0);
-			sample_k_n_right = currentSamplesRight.remove(0);
-//			System.out.println("" + sample_k_n_left + ", " + sample_k_n_right);
-			currentSamplesLeft.add(newColorLeft[0]);
-			currentSamplesRight.add(newColorRight[0]);
-			newAverageLeft = average(currentSamplesLeft);
-			newAverageRight = average(currentSamplesRight);
-
-			System.out.println("" + newAverageLeft + ", " + newAverageRight);
-			
-			//if f(xi+1) - f(x) <= 0 reached peak of line
-			//	YOU CAN TRY TO CHANGE 0 to -0.05 or some shit to say the change must be strong
-			if(((newAverageLeft - oldAverageLeft) < -0.01) && foundLeft == 0) {
-				leftMotor.stop(true);
-				foundLeft++;
-			}
-			if(((newAverageRight - oldAverageRight) <-0.01 )  && foundRight == 0) {
-				rightMotor.stop(true);
-				foundRight++;
-			}
-			
-			// Store last averages
-			oldAverageLeft = newAverageLeft;
-			oldAverageRight = newAverageRight;
-
-			// If line found for both sensors, exit
-			if(foundLeft == 1 && foundRight == 1) {
-				break;
-			}
-		}
-		
-	}
-	*/
-	
-	/*
-	public static float average(ArrayList<Float> samples) {
-		float sum = 0;
-		for(Float sample : samples)
-		    sum += sample;
-		return sum/samples.size();
-	}
-	*/
 
 
 	

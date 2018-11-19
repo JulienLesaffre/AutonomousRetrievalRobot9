@@ -27,7 +27,7 @@ public class LightLocalizer {
 	private static EV3LargeRegulatedMotor leftMotor;
 	
 	//constants
-	private static final int LIGHTLOC_MOTOR_SPEED = 170;
+	private static final int LIGHTLOC_MOTOR_SPEED = 200;
 	private static final int LIGHTLOC_MOTOR_ACCELERATION = 1500;
 	private static final int RIGHT_ANGLE = 90;
 	
@@ -158,7 +158,7 @@ public class LightLocalizer {
 				foundLeft++;
 			}
 			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
+			if((newColorRight[0]) < 0.28 && oldSampleRight > 0.28 && foundRight == 0) {
 				rightMotor.stop(true);
 				foundRight++;
 			}
@@ -177,7 +177,7 @@ public class LightLocalizer {
 		Navigation.moveStraight(Navigation.SENSOR_OFFSET, true, false);
 		// Turn left 90 degrees to face 0 degrees
 		Navigation.turnRobot(RIGHT_ANGLE, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
-		
+		Navigation.setSpeedAcceleration(LIGHTLOC_MOTOR_SPEED, LIGHTLOC_MOTOR_ACCELERATION);
 	}
 
 	
@@ -225,97 +225,9 @@ public class LightLocalizer {
 		Navigation.moveStraight(Navigation.SENSOR_OFFSET, true, false);
 		// Turn left 90 degrees to face 0 degrees
 		Navigation.turnRobot(RIGHT_ANGLE, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+		Navigation.setSpeedAcceleration(LIGHTLOC_MOTOR_SPEED, LIGHTLOC_MOTOR_ACCELERATION);
 		
 	}
 	
-	
-	
-	/**
-	 * This method finds the second right line for correcting the odometer
-	 */
-	public static void findright() {
-		
-		// Track how many lines found by left and right sensor
-		int foundLeft = 0;
-		int foundRight = 0;
-
-		leftMotor.forward();
-		rightMotor.forward();
-
-		while(true) {
-			// Get color sensor readings
-			leftSample.fetchSample(newColorLeft, 0); // acquire data
-			rightSample.fetchSample(newColorRight, 0); 
-
-			// If line detected for left sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
-				leftMotor.stop(true);
-				foundLeft++;
-			}
-			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
-				rightMotor.stop(true);
-				foundRight++;
-			}
-
-			// Store last color readings
-			oldSampleLeft = newColorLeft[0];
-			oldSampleRight = newColorRight[0];
-
-			// If line found for both sensors, exit
-			if(foundLeft == 1 && foundRight == 1) {
-				break;
-			}
-		}
-
-		
-	}
-
-	
-	
-	/**
-	 * This method find the first line ahead when starting the localization.
-	 * @throws OdometerExceptions
-	 */
-	public static void findstraight() throws OdometerExceptions {
-		// Track how many lines found by left and right sensor
-		int foundLeft = 0;
-		int foundRight = 0;
-
-
-		leftMotor.forward();
-		rightMotor.forward();
-
-		while(true) {
-			// Get color sensor readings
-			leftSample.fetchSample(newColorLeft, 0); // acquire data
-			rightSample.fetchSample(newColorRight, 0); 
-
-			// If line detected for left sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
-				leftMotor.stop(true);
-				foundLeft++;
-			}
-			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
-				rightMotor.stop(true);
-				foundRight++;
-			}
-
-			// Store last color readings
-			oldSampleLeft = newColorLeft[0];
-			oldSampleRight = newColorRight[0];
-
-			// If line found for both sensors, exit
-			if(foundLeft == 1 && foundRight == 1) {
-				break;
-			}
-		}
-
-		// Move forward by length of offset
-		Navigation.moveStraight(1.5, true, false);
-		Navigation.turnRobot(RIGHT_ANGLE, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
-		
-	}
 	
 }

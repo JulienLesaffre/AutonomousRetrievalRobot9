@@ -182,6 +182,25 @@ public class AutonomousRetrievalRobot {
 	}
 	
 	
+	public static void testColorSensorReadings() throws OdometerExceptions {
+		int count = 1;
+		while(Button.waitForAnyPress() != Button.ID_ESCAPE) {
+			System.out.println("");
+			System.out.println("///////////******* START *******///////////" + " - " + count);
+			System.out.println("");
+			odometer.setXYT(1*Navigation.SQUARE_SIZE, 1*Navigation.SQUARE_SIZE, 0);
+			Navigation.travelToWithCorrection(1*Navigation.SQUARE_SIZE, 3*Navigation.SQUARE_SIZE);
+			Navigation.travelToWithCorrection(3*Navigation.SQUARE_SIZE, 3*Navigation.SQUARE_SIZE);
+			Navigation.travelToWithCorrection(3*Navigation.SQUARE_SIZE, 1*Navigation.SQUARE_SIZE);
+			Navigation.travelToWithCorrection(1*Navigation.SQUARE_SIZE, 1*Navigation.SQUARE_SIZE);
+			System.out.println("");
+			System.out.println("///////////******* FINISH *******///////////" + " - " + count);
+			System.out.println("");
+			count++;
+		}
+	}
+	
+	
 	public static void main(String[] args) throws OdometerExceptions {
 		
 		initialize(); 									//initialize class variables needed

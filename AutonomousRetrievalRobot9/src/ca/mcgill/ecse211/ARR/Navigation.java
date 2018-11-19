@@ -688,12 +688,12 @@ public class Navigation {
 				rightMotor.forward();
 
 				int foundLeft = 0; int foundRight = 0;
-
+				int count = 1;
 				while(true) {
 					// Get color sensor readings
 					leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
 					rightSampleProvider.fetchSample(newColorRight, 0); 
-					System.out.println("left: " + newColorLeft[0] + ", right: " + newColorRight[0]);
+					System.out.println("" + count + "; " + newColorLeft[0] + "; " + newColorRight[0]);
 					
 					// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
 					if((newColorLeft[0]) < 0.28 && oldSampleLeft > 0.28 && foundLeft == 0) {

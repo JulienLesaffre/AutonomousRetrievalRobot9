@@ -18,10 +18,10 @@ public class Odometer extends OdometerData implements Runnable {
 	private static Odometer odo = null; // Returned as singleton
 
 	// Motors and related variables
-	private int leftMotorTachoCount;
-	private int rightMotorTachoCount;
-	private int lastLeftMotorTachoCount;
-	private int lastRightMotorTachoCount;
+	public int leftMotorTachoCount;
+	public int rightMotorTachoCount;
+	public int lastLeftMotorTachoCount;
+	public int lastRightMotorTachoCount;
 	private EV3LargeRegulatedMotor leftMotor;
 	private EV3LargeRegulatedMotor rightMotor;
 

@@ -1,118 +1,81 @@
 package ca.mcgill.ecse211.ARR;
 
+import java.util.ArrayList;
+
 import lejos.robotics.SampleProvider;
 
 public class RingDetection {
 
-	private static float[] blueRGB = { 0.030f, 0.105f, 0.120f };
-	private static float[] greenRGB = { 0.043f, 0.095f, 0.020f };
-	private static float[] yellowRGB = { 0.188f, 0.132f, 0.032f };
-	private static float[] orangeRGB = { 0.103f, 0.030f, 0.028f };
 
 	private static SampleProvider colorSample;
+	private static float[] rgbValues = new float[3];
 
 	public RingDetection(SampleProvider sp) {
 		colorSample = sp;
 	}
 	
-	/**
-	 * @param rgb:
-	 *            rgb values detected by the light sensor
-	 * @return: returns the integer corresponding to the color detected (1: blue, 2:
-	 *          green, 3: yellow, 4: orange and 0 if no color has been detected)
-	 */
-	public static int detectColor(float[] rgb) {
-		float[] colorsDistances = new float[5];
-
-		// if this distance is the minimum then, no Color/Object is detected
-		colorsDistances[0] = 0.07f; // to modify
-
-		// distance from Blue
-		colorsDistances[1] = (float) distance(blueRGB, rgb);
-
-		// distance from Green
-		colorsDistances[2] = (float) distance(greenRGB, rgb);
-
-		// distance from Yellow
-		colorsDistances[3] = (float) distance(yellowRGB, rgb);
-
-		// distance from Orange
-		colorsDistances[4] = (float) distance(orangeRGB, rgb);
-
-		return getMinIndex(colorsDistances);
-	}
-
-	/**
-	 * @param rgbMean: rgb values of the ring
-	 * @param rgbValues: rgb values detected by the light sensor
-	 * @return: returns the euclidean distance between the two parameters
-	 */
-	private static double distance(float[] rgbMean, float[] rgbValues) {
-		return Math.sqrt(Math.pow(rgbMean[0] - rgbValues[0], 2) + Math.pow(rgbMean[1] - rgbValues[1], 2)
-				+ Math.pow(rgbMean[2] - rgbValues[2], 2));
-	}
-
-	public static boolean startOfRing() {
-		float[] rgbValues = new float[3];
-		int ringsDetected = 0;
-		colorSample.fetchSample(rgbValues, 0);
-		if(rgbValues[0] > 0.0070f)
-			ringsDetected++;
-		if(rgbValues[1] > 0.0070f)
-			ringsDetected++;
-		if(rgbValues[2] > 0.0070f)
-			ringsDetected++;
+	
+	public static int detectColorRatios(float[] rgb) {
+		double B_G, G_R;
+		B_G = rgb[2]/rgb[1] * 100.0;
+		G_R = rgb[1]/rgb[0] * 100.0;
 		
-		if(ringsDetected>= 2)
+		if(B_G > 80.0) {
+			return 1;		//definitely blue
+		} else if (G_R > 100.0 && G_R <400.0) {
+			return 2; 		//definitely green
+		} else if (G_R > 47.0) {
+			return 3;
+		} else if (G_R <= 47.0 && G_R > 0.0) {
+			return 4;
+		} else {
+			return 0;
+		}
+
+		
+	}
+	
+	public static boolean isThereARing() {
+		ArrayList<Float> red = new ArrayList<Float>(40);
+		ArrayList<Float> green = new ArrayList<Float>(40);
+		ArrayList<Float> blue = new ArrayList<Float>(40);
+		
+		float[] rgbValues = new float[3];
+		RingDetection.colorSample.fetchSample(rgbValues, 0);
+		
+		for(int i = 0; i < 40; i++) {
+			red.add(i, rgbValues[0]);
+			green.add(i, rgbValues[1]);
+			blue.add(i, rgbValues[2]);
+		}
+		int count = 0;
+		
+		//if there are 2 or more rings above 0.003 then there is a ring there
+		
+		if(averageFloat(red) > 0.0030f) count++;
+		if(averageFloat(green) > 0.0030f) count++;
+		if(averageFloat(blue) > 0.0030f) count++;
+		
+		if(count >= 2) 
 			return true;
 		else
 			return false;
 	}
 	
-	private static int colorDetection(float[] rgb) {
-		float[] colorsDistances = new float[5];
-
-		// if this distance is the minimum then, no Color/Object is detected
-		colorsDistances[0] = 0.12f; // sensitivity to detect a color (0.07)
-
-		// distance from Blue
-		colorsDistances[1] = (float) distance(blueRGB, rgb);
-
-		// distance from Green
-		colorsDistances[2] = (float) distance(greenRGB, rgb);
-
-		// distance from Yellow
-		colorsDistances[3] = (float) distance(yellowRGB, rgb);
-
-		// distance from Orange
-		colorsDistances[4] = (float) distance(orangeRGB, rgb);
-
-		return getMinIndex(colorsDistances);
+	public static float averageFloat(ArrayList<Float> samples) {
+		float sum = 0;
+		for(Float sample : samples)
+		    sum += sample;
+		return (sum/samples.size());
 	}
-	/**
-	 * @param inputArray
-	 * @return: the index of the minimum element of the array
-	 */
-	private static int getMinIndex(float[] inputArray) {
-		double minValue = inputArray[0];
-		int minIndex = 0;
-		for (int i = 0; i < inputArray.length; i++) {
-			if (inputArray[i] < minValue) {
-				minValue = inputArray[i];
-				minIndex = i;
-			}
-		}
-		return minIndex;
-	}
+
 	public static int colorDetection() {
-		float[] rgbValues = new float[3];
 		RingDetection.colorSample.fetchSample(rgbValues, 0);
-//		System.out.println(rgbValues[0] + ";" + rgbValues[1] + ";" + rgbValues[2] );
-
-		return RingDetection.colorDetection(rgbValues);
-
+		return RingDetection.detectColorRatios(rgbValues);
 	}
 	
-
+	
+	
+	
 
 }

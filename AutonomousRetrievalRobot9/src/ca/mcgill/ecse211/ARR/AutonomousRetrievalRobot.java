@@ -18,7 +18,18 @@ import lejos.robotics.SampleProvider;
 import java.util.Map;
 import lejos.hardware.Button;
 
-
+/*
+ * can ask in the correction algorithm, if the angle you are at on the odometer is not within 10 degrees +- of
+ * one of the right angles, then dont correct, turn the robot to the closest 90 degree angle and move out of the lines ways so that
+ * they do not mess up the odometer.
+ * 
+ * 
+ * 
+ * 
+ * faster localization turns
+ * dont go back to line if already detected
+ * turning for picking up is too slow
+ */
 
 /**
  * This is the main execution class for the robot.
@@ -41,10 +52,12 @@ public class AutonomousRetrievalRobot {
 	private static SampleProvider leftSampleProvider;
 	private static SampleProvider rightSampleProvider;
 	private static SampleProvider usSampleProvider;
+	private static SensorModes usSensor;
 	private static SampleProvider colorSampleProvider;
+	private static SensorModes colorSensor;
 	private static EV3LargeRegulatedMotor rightMotor;
 	private static EV3LargeRegulatedMotor leftMotor;
-	private static EV3LargeRegulatedMotor poleMotor;
+	private static EV3LargeRegulatedMotor dumpRingMotor;
 	private static EV3MediumRegulatedMotor clawMotor;
 
 	
@@ -68,19 +81,19 @@ public class AutonomousRetrievalRobot {
 		leftMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
 		rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
 		clawMotor = new EV3MediumRegulatedMotor(LocalEV3.get().getPort("B"));
-		poleMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("C"));
+		dumpRingMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("C"));
 		
 		//sensors
 		SensorModes myColorLeft = new EV3ColorSensor(LocalEV3.get().getPort("S2"));
 		leftSampleProvider = myColorLeft.getMode("Red");
 		SensorModes myColorRight = new EV3ColorSensor(LocalEV3.get().getPort("S3"));
 		rightSampleProvider = myColorRight.getMode("Red");
-		SensorModes usSensor = new EV3UltrasonicSensor(LocalEV3.get().getPort("S1"));
+		usSensor = new EV3UltrasonicSensor(LocalEV3.get().getPort("S1"));
 		usSampleProvider = usSensor.getMode("Distance");
-		SensorModes colorSensor = new EV3ColorSensor(LocalEV3.get().getPort("S4"));
+		colorSensor = new EV3ColorSensor(LocalEV3.get().getPort("S4"));
 		colorSampleProvider = colorSensor.getMode("RGB");
 		
-		
+
 		//start odometer thread
 		odometer = Odometer.getOdometer(leftMotor, rightMotor, Navigation.TRACK, Navigation.WHEEL_RAD);
 		Thread odoThread = new Thread(odometer);
@@ -88,12 +101,11 @@ public class AutonomousRetrievalRobot {
 		
        
 		//initialize classes with required ev3 sensors and motors
-		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor, poleMotor, clawMotor); 
-		usLocalizer = new UltrasonicLocalizer(usSampleProvider, leftMotor, rightMotor);
+		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor); 
+		usLocalizer = new UltrasonicLocalizer(odometer, usSampleProvider, leftMotor, rightMotor);
 		lightLocalizer = new LightLocalizer(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor);
 		ringDetection = new RingDetection(colorSampleProvider);
-		ringCont = new RingController(odometer, leftMotor, rightMotor, poleMotor, clawMotor, leftSampleProvider, rightSampleProvider);
-		
+		ringCont = new RingController(dumpRingMotor, clawMotor);
 	}
 	
 
@@ -102,7 +114,7 @@ public class AutonomousRetrievalRobot {
 	 * the server to pass the game parameters for the round. It extracts the data and places
 	 * the data in the correct variable in the Navigation class.
 	 */
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({ "rawtypes", "unused" })
 	private static void retrieveDataFromServer() {
 		
 		// Initialize WifiConnection class
@@ -162,50 +174,43 @@ public class AutonomousRetrievalRobot {
 	 * where the motor stops and resets the tachometer count so that all movement afterwards
 	 * is with rotateTo. Expects the motor variables to be initialized and connected to the ports.
 	 */
-	public static void initializeHook() {
-		RingController.raisePole();
+	public static void initializeMotors() {
+		dumpRingMotor.resetTachoCount();
 		clawMotor.resetTachoCount();
-		clawMotor.rotateTo(RingController.CLAW_GRAB_ANGLE_FULL);
-	}
-	
-	public static void test() {
-		poleMotor.rotateTo(0);
-		while (Button.waitForAnyPress() != Button.ID_ESCAPE) {
-			poleMotor.rotateTo(0);
-			if (Button.waitForAnyPress() == Button.ID_LEFT) {
-				poleMotor.rotateTo(45);
-			}
-			else {
-				poleMotor.rotateTo(65);
-			}
-		}
+		clawMotor.setAcceleration(4000);
+		clawMotor.setSpeed(250);
 	}
 	
 	
 	public static void main(String[] args) throws OdometerExceptions {
 		
 		initialize(); 									//initialize class variables needed
+
+		initializeMotors();
 		
+		clawMotor.rotateTo(135);
+		clawMotor.flt();
 		
-		initializeHook();
-		
-		
+		System.out.println("ready");
+
+		Button.waitForAnyPress();
 
 //		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		
-//		usLocalizer.fallingEdge();						//us localize
-//		
-//		lightLocalizer.localize(); 						//light localize
-//		
-//		Navigation.travelToTunnel(true);				//travel to and through tunnel
-//		
-//		Navigation.travelTunnelToRingSet();				//travel from tunnel to ring set
-//		
+		usLocalizer.fallingEdge();						//us localize
+		
+		lightLocalizer.localize(); 						//light localize
+		
+		Navigation.travelToTunnel(true);				//travel to and through tunnel
+		
+		Navigation.travelTunnelToRingSet();				//travel from tunnel to ring set
+		
+
 		RingController.detectAllRings();
 		
-		RingController.pickUpTwoRings();
+		RingController.pickUpRings();
 		
-		Navigation.travelRingSetToTunnel();
+		Navigation.ringSetToTunnel();
 		
 		Navigation.travelTunnelToStart();
 		

@@ -188,16 +188,16 @@ public class RingController {
 	 */
 	public static void detectAllRings() throws OdometerExceptions {
 		//turn so ring set is to the left of robot
-//		Navigation.setupHeadingForDetection();
+		Navigation.setupHeadingForDetection();
 		for(int i=0; i<4; i++) {
 			poleMotor.rotateTo(0);
 			Navigation.moveStraight(Navigation.RING_DETECTION_OFFSET, true, false);
 			Navigation.turnRobot(Navigation.RIGHT_ANGLE, false, false);
-			findLineAhead();
+			detectRing();
 		}
 	}
 
-	private static void findLineAhead() throws OdometerExceptions {
+	private static void detectRing() throws OdometerExceptions {
 		
 		int foundLeft = 0, foundRight = 0;						// Track how many lines found by left and right sensor
 		float[] newColorLeft = {0}, newColorRight = {0};		

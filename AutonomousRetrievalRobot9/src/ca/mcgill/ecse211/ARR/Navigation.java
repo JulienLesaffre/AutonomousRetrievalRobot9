@@ -15,7 +15,7 @@ public class Navigation {
 	public static int RedTeam = -1; 		
 	public static int GreenTeam = 9; 
 	public static int RedCorner = -1; 
-	public static int GreenCorner = 2;
+	public static int GreenCorner = 0;
 	public static int Red_LL_x = -1;
 	public static int Red_LL_y = -1;
 	public static int Red_UR_x = -1;
@@ -32,14 +32,15 @@ public class Navigation {
 	public static int TNR_LL_y = 3;
 	public static int TNR_UR_x = 4;
 	public static int TNR_UR_y = 5;
-	public static int TNG_LL_x = 5;
-	public static int TNG_LL_y = 4;
-	public static int TNG_UR_x = 6;
-	public static int TNG_UR_y = 6;
 	public static int TR_x = 6;
 	public static int TR_y = 6;
-	public static int TG_x = 2;
-	public static int TG_y = 2;
+	
+	public static int TNG_LL_x = 3;
+	public static int TNG_LL_y = 4;
+	public static int TNG_UR_x = 4;
+	public static int TNG_UR_y = 5;
+	public static int TG_x = 6;
+	public static int TG_y = 6;
 	
 	//Speed and acceleration
 	public static final int ROTATE_SPEED_SLOW = 80;

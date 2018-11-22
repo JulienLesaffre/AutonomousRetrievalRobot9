@@ -153,12 +153,12 @@ public class LightLocalizer {
 			rightSample.fetchSample(newColorRight, 0); 
 
 			// If line detected for left sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorLeft[0]) < 0.27 && oldSampleLeft > 0.27 && foundLeft == 0) {
+			if((newColorLeft[0]) <= 0.33 && oldSampleLeft > 0.33 && foundLeft == 0) {
 				leftMotor.stop(true);
 				foundLeft++;
 			}
 			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorRight[0]) < 0.27 && oldSampleRight > 0.27 && foundRight == 0) {
+			if((newColorRight[0]) <= 0.33 && oldSampleRight > 0.33 && foundRight == 0) {
 				rightMotor.stop(true);
 				foundRight++;
 			}

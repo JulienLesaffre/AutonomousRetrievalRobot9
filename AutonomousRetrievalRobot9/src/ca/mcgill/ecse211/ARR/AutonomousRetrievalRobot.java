@@ -233,12 +233,6 @@ public class AutonomousRetrievalRobot {
 		System.out.println("ready");
 
 
-//		int button = Button.waitForAnyPress();
-//		while(button != Button.ID_ESCAPE) {
-//			testColorSensor();
-//			button = Button.waitForAnyPress();
-//		}
-
 		Button.waitForAnyPress();
 
 //		retrieveDataFromServer();						//connect to the server and wait to recieve variables
@@ -251,7 +245,6 @@ public class AutonomousRetrievalRobot {
 		
 		Navigation.travelTunnelToRingSet();				//travel from tunnel to ring set
 		
-
 		RingController.detectAllRings();
 		
 		RingController.pickUpRings();

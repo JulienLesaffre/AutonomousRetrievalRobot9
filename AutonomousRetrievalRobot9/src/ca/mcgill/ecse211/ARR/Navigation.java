@@ -278,7 +278,7 @@ public class Navigation {
 		
 
 		setSpeedAcceleration(TUNNEL_SPEED, TUNNEL_ACCEL);
-		moveStraight(SQUARE_SIZE * 3.3, true, false);
+		moveStraight(SQUARE_SIZE * 3.5, true, false);
 		
 
 		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
@@ -376,7 +376,7 @@ public class Navigation {
 		turnToCoord(tunnelExitMidpoint[0], tunnelExitMidpoint[1], ROTATE_SPEED_SLOW, ROTATE_ACCEL_SLOW);
 
 		setSpeedAcceleration(TUNNEL_SPEED, TUNNEL_ACCEL);
-		moveStraight(SQUARE_SIZE * 3.3, true, false);
+		moveStraight(SQUARE_SIZE * 3.5, true, false);
 		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 		
 			
@@ -694,15 +694,15 @@ public class Navigation {
 					leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
 					rightSampleProvider.fetchSample(newColorRight, 0); 
 					System.out.println("" + count + "; " + newColorLeft[0] + "; " + newColorRight[0]);
-					
+
 					// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
-					if((newColorLeft[0]) < 0.28 && oldSampleLeft > 0.28 && foundLeft == 0) {
+					if((newColorLeft[0]) < 0.26 && oldSampleLeft > 0.26 && foundLeft == 0) {
 						leftMotor.stop(true);
 						System.out.println("detected left ^");
 						foundLeft++;
 					}
 					// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-					if((newColorRight[0]) < 0.28 && oldSampleRight > 0.28 && foundRight == 0) {
+					if((newColorRight[0]) < 0.26 && oldSampleRight > 0.26 && foundRight == 0) {
 						rightMotor.stop(true);
 						System.out.println("detected right ^");
 						foundRight++;
@@ -952,12 +952,12 @@ public class Navigation {
 			rightSampleProvider.fetchSample(newColorRight, 0); 
 
 			// If line detected for left sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorLeft[0]) < 0.3 && oldSampleLeft > 0.3 && foundLeft == 0) {
+			if((newColorLeft[0]) < 0.26 && oldSampleLeft > 0.26 && foundLeft == 0) {
 				leftMotor.stop(true);
 				foundLeft++;
 			}
 			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorRight[0]) < 0.3 && oldSampleRight > 0.3 && foundRight == 0) {
+			if((newColorRight[0]) < 0.26 && oldSampleRight > 0.26 && foundRight == 0) {
 				rightMotor.stop(true);
 				foundRight++;
 			}

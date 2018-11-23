@@ -16,7 +16,7 @@ import lejos.robotics.SampleProvider;
 public class UltrasonicLocalizer {
 
 	//constants
-	private static final int USLOC_MOTOR_SPEED = 170;
+	private static final int USLOC_MOTOR_SPEED = 200;
 	private static final int USLOC_MOTOR_ACCELERATION = 2000;
 	private static final int D_THRESHHOLD = 30;
 	private static final int NOISE_MARGIN = 5;
@@ -159,19 +159,6 @@ public class UltrasonicLocalizer {
 		double dTheta = 225.0 - ((ALPHA+BETA)/2.0);
 		correctAngle(dTheta);
 		
-		
-//		// Alpha and Beta algorithms
-//		if (ALPHA < BETA) {
-//			angleCorrection = 40 - ((ALPHA + BETA) / 2); 
-//		} else {
-//			angleCorrection = 220 - ((ALPHA + BETA) / 2);
-//		} 
-//
-//		// Set theta to 0 to apply correction
-//		// from current reference angle
-//		//Odometer.getOdometer().setTheta(0);
-//		FINAL_ANGLE = 180-(angleCorrection + odometer[2]);
-//		Navigation.turnTo(FINAL_ANGLE);
 
 		isUSLocalizing = false;
 	}

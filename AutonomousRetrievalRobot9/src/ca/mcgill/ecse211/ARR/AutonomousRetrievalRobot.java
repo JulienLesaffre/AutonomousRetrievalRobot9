@@ -180,45 +180,6 @@ public class AutonomousRetrievalRobot {
 		clawMotor.setAcceleration(4000);
 		clawMotor.setSpeed(250);
 	}
-	public static void testColorSensor() {
-		float[] newColorLeft = new float[leftSampleProvider.sampleSize()];
-		float[] newColorRight = new float[rightSampleProvider.sampleSize()];
-		Navigation.setSpeedAcceleration(240, 1500);
-		Navigation.moveStraight(4*Navigation.SQUARE_SIZE, true, true);
-		while(leftMotor.isMoving()) {
-			// Get color sensor readings
-			leftSampleProvider.fetchSample(newColorLeft, 0); // acquire data
-			rightSampleProvider.fetchSample(newColorRight, 0); 
-			System.out.println("" + newColorLeft[0] + "; " + newColorRight[0]);
-		}
-	}
-	
-	public static void testColorSensorReadings() throws OdometerExceptions {
-		int count = 1;
-		while(Button.waitForAnyPress() != Button.ID_ESCAPE) {
-			System.out.println("");
-			System.out.println("///////////******* START *******///////////" + " - " + count);
-			System.out.println("");
-			odometer.setXYT(1*Navigation.SQUARE_SIZE, 1*Navigation.SQUARE_SIZE, 0);
-			Navigation.moveStraight(3*Navigation.SQUARE_SIZE, true, false);
-			Navigation.turnRobot(90, true, false, 180, 1000);
-			Navigation.moveStraight(3*Navigation.SQUARE_SIZE, true, false);
-			Navigation.turnRobot(90, true, false, 180, 1000);
-			Navigation.moveStraight(3*Navigation.SQUARE_SIZE, true, false);
-			Navigation.turnRobot(90, true, false, 180, 1000);
-			Navigation.moveStraight(3*Navigation.SQUARE_SIZE, true, false);
-			Navigation.turnRobot(90, true, false, 180, 1000);
-//			Navigation.travelToWithCorrection(1*Navigation.SQUARE_SIZE, 2*Navigation.SQUARE_SIZE);
-//			Navigation.travelToWithCorrection(3*Navigation.SQUARE_SIZE, 3*Navigation.SQUARE_SIZE);
-//			Navigation.travelToWithCorrection(3*Navigation.SQUARE_SIZE, 1*Navigation.SQUARE_SIZE);
-//			Navigation.travelToWithCorrection(1*Navigation.SQUARE_SIZE, 1*Navigation.SQUARE_SIZE);
-//			Navigation.moveStraight(3*Navigation.SQUARE_SIZE, true, false);
-			System.out.println("");
-			System.out.println("///////////******* FINISH *******///////////" + " - " + count);
-			System.out.println("");
-			count++;
-		}
-	}
 	
 	
 	public static void main(String[] args) throws OdometerExceptions {
@@ -236,6 +197,7 @@ public class AutonomousRetrievalRobot {
 		Button.waitForAnyPress();
 
 //		retrieveDataFromServer();						//connect to the server and wait to recieve variables
+		
 		
 		usLocalizer.fallingEdge();						//us localize
 		

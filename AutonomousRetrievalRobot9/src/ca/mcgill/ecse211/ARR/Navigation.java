@@ -15,7 +15,7 @@ public class Navigation {
 	public static int RedTeam = -1; 		
 	public static int GreenTeam = 9; 
 	public static int RedCorner = -1; 
-	public static int GreenCorner = 0;
+	public static int GreenCorner = 2;
 	public static int Red_LL_x = -1;
 	public static int Red_LL_y = -1;
 	public static int Red_UR_x = -1;
@@ -36,10 +36,10 @@ public class Navigation {
 	public static int TR_y = 6;
 	
 	public static int TNG_LL_x = 3;
-	public static int TNG_LL_y = 4;
+	public static int TNG_LL_y = 2;
 	public static int TNG_UR_x = 4;
-	public static int TNG_UR_y = 5;
-	public static int TG_x = 6;
+	public static int TNG_UR_y = 3;
+	public static int TG_x = 4;
 	public static int TG_y = 6;
 	
 	//Speed and acceleration
@@ -60,6 +60,7 @@ public class Navigation {
 	public static final double RING_DETECTION_DISTANCE_TOP = 4.4;
 	public static final double RING_DETECTION_DISTANCE_BOTTOM = 6.0;
 	public static final int RIGHT_ANGLE = 90;
+	public static final double LIGHT_INTENSITY = 0.33;
 
 	//Association variables
 	private static Odometer odometer;
@@ -279,14 +280,18 @@ public class Navigation {
 		
 
 		setSpeedAcceleration(TUNNEL_SPEED, TUNNEL_ACCEL);
-		moveStraight(SQUARE_SIZE * 3.5, true, false);
+		double distance = distance(findTunnelMidpoint(true),findTunnelMidpoint(false));
+		System.out.println("DISTANCE: " + distance);
+		moveStraight(SQUARE_SIZE * 1.5 + distance, true, false); //travels the tunnel
 		
 
 		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 	}
 	
-	
+	private static double distance(double[] xy1, double[] xy2) {
+		return Math.sqrt(Math.pow(xy1[0] - xy2[0], 2) + Math.pow(xy1[1] - xy2[1], 2));
+	}
 
 
 	/**
@@ -697,13 +702,13 @@ public class Navigation {
 					System.out.println("" + count + "; " + newColorLeft[0] + "; " + newColorRight[0]);
 
 					// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
-					if((newColorLeft[0]) < 0.26 && oldSampleLeft > 0.26 && foundLeft == 0) {
+					if((newColorLeft[0]) <= LIGHT_INTENSITY && oldSampleLeft > LIGHT_INTENSITY && foundLeft == 0) {
 						leftMotor.stop(true);
-						System.out.println("detected left ^");
+						System.out.println("detected left ");
 						foundLeft++;
 					}
 					// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-					if((newColorRight[0]) < 0.26 && oldSampleRight > 0.26 && foundRight == 0) {
+					if((newColorRight[0]) <= LIGHT_INTENSITY && oldSampleRight > LIGHT_INTENSITY && foundRight == 0) {
 						rightMotor.stop(true);
 						System.out.println("detected right ^");
 						foundRight++;
@@ -953,12 +958,12 @@ public class Navigation {
 			rightSampleProvider.fetchSample(newColorRight, 0); 
 
 			// If line detected for left sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorLeft[0]) < 0.26 && oldSampleLeft > 0.26 && foundLeft == 0) {
+			if((newColorLeft[0]) <= LIGHT_INTENSITY && oldSampleLeft > LIGHT_INTENSITY && foundLeft == 0) {
 				leftMotor.stop(true);
 				foundLeft++;
 			}
 			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((newColorRight[0]) < 0.26 && oldSampleRight > 0.26 && foundRight == 0) {
+			if((newColorRight[0]) <= LIGHT_INTENSITY && oldSampleRight > LIGHT_INTENSITY && foundRight == 0) {
 				rightMotor.stop(true);
 				foundRight++;
 			}
@@ -1060,7 +1065,7 @@ public class Navigation {
 	public static void setSpeedAcceleration(int speed, int acceleration) {
 		leftMotor.setAcceleration(acceleration);
 		rightMotor.setAcceleration(acceleration);
-		leftMotor.setSpeed(speed);
+		leftMotor.setSpeed(speed+3);
 		rightMotor.setSpeed(speed);
 	}
 

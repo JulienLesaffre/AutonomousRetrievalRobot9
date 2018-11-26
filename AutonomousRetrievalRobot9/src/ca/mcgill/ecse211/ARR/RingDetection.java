@@ -74,8 +74,5 @@ public class RingDetection {
 		return RingDetection.detectColorRatios(rgbValues);
 	}
 	
-	
-	
-	
 
 }

@@ -34,7 +34,7 @@ public class LightLocalizer {
 	//associations
 	private static Odometer odo;
 	
-	
+	//variables
 	public static boolean isLightLocalizing = false;
 
 
@@ -117,18 +117,18 @@ public class LightLocalizer {
 			odo.setTheta(0);
 			break;
 		case 1:
-			odo.setX(7.0 * Navigation.SQUARE_SIZE);
+			odo.setX((Navigation.fieldX - 1) * Navigation.SQUARE_SIZE);
 			odo.setY(Navigation.SQUARE_SIZE);
 			odo.setTheta(270);
 			break;
 		case 2:
-			odo.setX(7.0 * Navigation.SQUARE_SIZE);
-			odo.setY(7.0 * Navigation.SQUARE_SIZE);
+			odo.setX((Navigation.fieldX - 1) * Navigation.SQUARE_SIZE);
+			odo.setY((Navigation.fieldY - 1) * Navigation.SQUARE_SIZE);
 			odo.setTheta(180);
 			break;
 		case 3:
 			odo.setX(Navigation.SQUARE_SIZE);
-			odo.setY(7.0 * Navigation.SQUARE_SIZE);
+			odo.setY((Navigation.fieldY - 1) * Navigation.SQUARE_SIZE);
 			odo.setTheta(90);
 			break;
 		}

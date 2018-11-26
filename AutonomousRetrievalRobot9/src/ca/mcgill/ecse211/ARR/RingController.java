@@ -23,8 +23,8 @@ public class RingController {
 	
 	
 	//speed and acceleration
-	private static final int COLOR_DETECTION_SPEED = 160;
-	private static final int COLOR_DETECTION_ACCEL = 700;
+	private static final int COLOR_DETECTION_SPEED = 190;
+	private static final int COLOR_DETECTION_ACCEL = 1000;
 	private static final int RING_PICKUP_SPEED = 180;
 	private static final int RING_PICKUP_ACCEL = 800;
 	private static final int CLAW_GRAB_SPEED = 250;
@@ -199,19 +199,16 @@ public class RingController {
 			return mode;
 	}
 	
-	
-
-	
 	public static void dropRings() {
 		clawMotor.rotateTo(0);
 		clawMotor.flt();
-		for(int i= 0; i < 5; i++) {
+		for(int i= 0; i < 3; i++) {
 			dumpRingMotor.rotateTo(45);
 			dumpRingMotor.rotateTo(0);
 			dumpRingMotor.rotateTo(45);
 			dumpRingMotor.rotateTo(0);
 		}
-		for(int i= 0; i < 3; i++) {
+		for(int i= 0; i < 2; i++) {
 			dumpRingMotor.rotateTo(65);
 			dumpRingMotor.rotateTo(0);
 			dumpRingMotor.rotateTo(65);

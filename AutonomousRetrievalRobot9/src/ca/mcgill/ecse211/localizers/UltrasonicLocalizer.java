@@ -21,6 +21,9 @@ public class UltrasonicLocalizer {
 	private static final int D_THRESHHOLD = 30;
 	private static final int NOISE_MARGIN = 5;
 	private static final int FILTER_OUT = 15;
+	private static final int NUMBER_OF_SAMPLES = 400;
+	private static final int SAFETY_THRESHOLD = 17;
+	
 	
 	//us sensor variables
 	private int filterControl;
@@ -84,17 +87,17 @@ public class UltrasonicLocalizer {
 		//Instantiate odometer storage and set theta of odometer to 0
 		double[] odometer = {0,0,0};
 		boolean isAboveThresh = false;
-//		double angleCorrection = 0;
+		
 		Odometer.getOdometer().setTheta(0);
 		
 		
 		float sum = 0;
-		for(int i=0; i < 100; i++) {
+		for(int i=0; i < NUMBER_OF_SAMPLES; i++) {
 			usSample.fetchSample(usData, 0); // acquire data
 			distance = (int) (usData[0] * 100.0); // extract from buffer, cast to int
 			sum += distance;
 		}
-		if(sum/100 < (D_THRESHHOLD + NOISE_MARGIN)) {
+		if(sum/NUMBER_OF_SAMPLES < (D_THRESHHOLD + NOISE_MARGIN)) {
 			findWallAbove();
 			isAboveThresh = true;
 		} else {
@@ -158,20 +161,6 @@ public class UltrasonicLocalizer {
 
 		double dTheta = 225.0 - ((ALPHA+BETA)/2.0);
 		correctAngle(dTheta);
-		
-		
-//		// Alpha and Beta algorithms
-//		if (ALPHA < BETA) {
-//			angleCorrection = 40 - ((ALPHA + BETA) / 2); 
-//		} else {
-//			angleCorrection = 220 - ((ALPHA + BETA) / 2);
-//		} 
-//
-//		// Set theta to 0 to apply correction
-//		// from current reference angle
-//		//Odometer.getOdometer().setTheta(0);
-//		FINAL_ANGLE = 180-(angleCorrection + odometer[2]);
-//		Navigation.turnTo(FINAL_ANGLE);
 
 		isUSLocalizing = false;
 	}
@@ -200,11 +189,12 @@ public class UltrasonicLocalizer {
 			rightMotor.backward();
 			if(distance > 100)
 				count++;
-			if (count >= 20) {
+			if (count >= SAFETY_THRESHOLD) {
 				leftMotor.stop(true);
 				rightMotor.stop(false);
 				leftMotor.resetTachoCount();
 				rightMotor.resetTachoCount();
+				
 				// Reset the values of x, y and z to 0
 				odo.setXYT(0, 0, 0);
 

@@ -2,9 +2,9 @@ package ca.mcgill.ecse211.localizers;
 
 import ca.mcgill.ecse211.ARR.Display;
 import ca.mcgill.ecse211.ARR.Navigation;
+import ca.mcgill.ecse211.ARR.RingController;
 import ca.mcgill.ecse211.odometer.Odometer;
 import ca.mcgill.ecse211.odometer.OdometerExceptions;
-import lejos.hardware.Sound;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.robotics.SampleProvider;
 
@@ -27,8 +27,8 @@ public class LightLocalizer {
 	private static EV3LargeRegulatedMotor leftMotor;
 	
 	//constants
-	private static final int LIGHTLOC_MOTOR_SPEED = 200;
-	private static final int LIGHTLOC_MOTOR_ACCELERATION = 1500;
+	private static final int LIGHTLOC_MOTOR_SPEED = 240;
+	private static final int LIGHTLOC_MOTOR_ACCELERATION = 1700;
 	private static final int RIGHT_ANGLE = 90;
 	
 	//associations
@@ -92,9 +92,7 @@ public class LightLocalizer {
 		double[] data = odo.getXYT();
 		Display.displayNavigation(data[0], data[1], data[2]);
 		
-		Sound.beep();
-		Sound.beep();
-		Sound.beep();
+		RingController.makeSound(3);
 		
 		isLightLocalizing = false;
 		
@@ -117,18 +115,18 @@ public class LightLocalizer {
 			odo.setTheta(0);
 			break;
 		case 1:
-			odo.setX((Navigation.fieldX - 1) * Navigation.SQUARE_SIZE);
+			odo.setX((Navigation.field_X_Max - 1) * Navigation.SQUARE_SIZE);
 			odo.setY(Navigation.SQUARE_SIZE);
 			odo.setTheta(270);
 			break;
 		case 2:
-			odo.setX((Navigation.fieldX - 1) * Navigation.SQUARE_SIZE);
-			odo.setY((Navigation.fieldY - 1) * Navigation.SQUARE_SIZE);
+			odo.setX((Navigation.field_X_Max - 1) * Navigation.SQUARE_SIZE);
+			odo.setY((Navigation.field_Y_Max - 1) * Navigation.SQUARE_SIZE);
 			odo.setTheta(180);
 			break;
 		case 3:
 			odo.setX(Navigation.SQUARE_SIZE);
-			odo.setY((Navigation.fieldY - 1) * Navigation.SQUARE_SIZE);
+			odo.setY((Navigation.field_Y_Max - 1) * Navigation.SQUARE_SIZE);
 			odo.setTheta(90);
 			break;
 		}

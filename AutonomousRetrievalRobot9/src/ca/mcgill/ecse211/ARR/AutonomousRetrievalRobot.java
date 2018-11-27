@@ -16,9 +16,13 @@ import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorModes;
 import lejos.robotics.SampleProvider;
 import java.util.Map;
-import lejos.hardware.Button;
 
-
+/*
+ * One size tunnel - all the parts too with the if its horizontal/vertical
+ * edge case the one next to water, the one next to wall
+ * 
+ * 
+ */
 
 /**
  * This is the main execution class for the robot.
@@ -49,7 +53,7 @@ public class AutonomousRetrievalRobot {
 
 	
 	//wifi connection parameters
-	private static final String SERVER_IP = "192.168.2.2";
+	private static final String SERVER_IP = "192.168.2.13";
 	private static final int TEAM_NUMBER = 9;
 	private static final boolean ENABLE_DEBUG_WIFI_PRINT = true;
 
@@ -102,7 +106,6 @@ public class AutonomousRetrievalRobot {
 	 * the server to pass the game parameters for the round. It extracts the data and places
 	 * the data in the correct variable in the Navigation class.
 	 */
-	@SuppressWarnings({ "rawtypes", "unused" })
 	private static void retrieveDataFromServer() {
 		
 		// Initialize WifiConnection class
@@ -113,6 +116,7 @@ public class AutonomousRetrievalRobot {
 			
 			//waits till start button pushed
 			//can kill while waiting by pressing escape button
+			@SuppressWarnings("rawtypes")
 			Map data = conn.getData();
 
 			//assign all the corresponding variables by retrieving the data
@@ -178,13 +182,11 @@ public class AutonomousRetrievalRobot {
 		clawMotor.rotateTo(135);
 		clawMotor.flt();
 
-		Button.waitForAnyPress();
+//		Button.waitForAnyPress();
 
-//		retrieveDataFromServer();						//connect to the server and wait to recieve variables
+		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		
 		usLocalizer.fallingEdge();						//us localize
-		
-		((EV3UltrasonicSensor) usSensor).disable();
 		
 		lightLocalizer.localize(); 						//light localize
 		

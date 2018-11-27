@@ -25,19 +25,21 @@ public class RingController {
 	//speed and acceleration
 	private static final int COLOR_DETECTION_SPEED = 190;
 	private static final int COLOR_DETECTION_ACCEL = 1000;
-	private static final int RING_PICKUP_SPEED = 180;
-	private static final int RING_PICKUP_ACCEL = 800;
+	private static final int RING_PICKUP_SPEED = 230;
+	private static final int RING_PICKUP_ACCEL = 1700;
 	private static final int CLAW_GRAB_SPEED = 250;
 	private static final int CLAW_GRAB_ACCEL = 6000;
 	
 	//distance and angles
-	public static final int CLAW_GRAB_ANGLE_FULL = 100;
+	private static final int CLAW_GRAB_ANGLE_FULL = 100;
+	private static final int CLAW_GRAB_ANGLE_HALF = 135;
 	private static final int TOPRING_DETECTION_ANGLE = 75;
 	private static final int BOTTOMRING_DETECTION_ANGLE = 39;
 	private static final double RING_GRAB_DISTANCE = 6.5;
-	private static final int RING_GRAB_ANGLE = 6;
+	private static final int RING_GRAB_ANGLE = 8;
 	private static final int COLOR_SAMPLE_SIZE = 300;
-
+	private static final double RING_DETECTION_DISTANCE_TOP = 4.7;
+	private static final double RING_DETECTION_DISTANCE_BOTTOM = 6.0;
 	
 	
 	
@@ -66,6 +68,7 @@ public class RingController {
 			Navigation.turnRobot(90, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
 			Navigation.findLineStraight(true, RING_PICKUP_SPEED, RING_PICKUP_ACCEL);
 			Navigation.turnRobot(90, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+			Navigation.findLineStraight(false, RING_PICKUP_SPEED, RING_PICKUP_ACCEL);
 			grabRing();
 		}
 		
@@ -78,11 +81,12 @@ public class RingController {
 		Navigation.turnRobot(RING_GRAB_ANGLE, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
 		clawMotor.setAcceleration(CLAW_GRAB_ACCEL);
 		clawMotor.setSpeed(CLAW_GRAB_SPEED);
-		clawMotor.rotateTo(CLAW_GRAB_ANGLE_FULL);
+		clawMotor.rotateTo(CLAW_GRAB_ANGLE_HALF);
 		clawMotor.stop(true);
 		Navigation.moveStraight(2, false, false);
+		clawMotor.rotateTo(CLAW_GRAB_ANGLE_FULL);
 		Navigation.turnRobot(RING_GRAB_ANGLE, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
-		Navigation.moveStraight(RING_GRAB_DISTANCE - 2, false, false);
+		Navigation.moveStraight(RING_GRAB_DISTANCE, false, false);
 		clawMotor.flt();
 	}
 
@@ -92,35 +96,53 @@ public class RingController {
 		//turn so ring set is to the left of robot
 		int colorDetected = -1;
 		Navigation.setupHeadingForDetection(true);	
+		Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
+		Navigation.turnRobot(90, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+		Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
+		Navigation.turnRobot(90, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+		
 		detectTopRings();
 		boolean top = true;
 		for(int i = 0; i < 4; i++) {
 			if(i!=0) {
 				Navigation.turnRobot(90, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+				Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
 			}
-			Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
 
-			
 			if(top) {
-				Navigation.moveStraight(Navigation.RING_DETECTION_DISTANCE_TOP, true, false);
+				Navigation.moveStraight(RING_DETECTION_DISTANCE_TOP, true, false);
 				colorDetected = detectColor();
+				if(colorDetected <= 0) 
+					tryDetectingAgain();
 				if(colorDetected <= 0) {
-					Navigation.moveStraight(Navigation.RING_DETECTION_DISTANCE_TOP, false, false);
+					Navigation.moveStraight(RING_DETECTION_DISTANCE_TOP, false, false);
 					detectBottomRings();
 					top = false;
-					Navigation.moveStraight(Navigation.RING_DETECTION_DISTANCE_BOTTOM, true, false);
+					Navigation.moveStraight(RING_DETECTION_DISTANCE_BOTTOM, true, false);
 					colorDetected = detectColor();
+					if(colorDetected <= 0)
+						tryDetectingAgain();
+					Navigation.moveStraight(RING_DETECTION_DISTANCE_BOTTOM, false, false);
+				} else {
+					Navigation.moveStraight(RING_DETECTION_DISTANCE_TOP, false, false);
 				}
 				Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
 			} else {
-				Navigation.moveStraight(Navigation.RING_DETECTION_DISTANCE_BOTTOM, true, false);
+				Navigation.moveStraight(RING_DETECTION_DISTANCE_BOTTOM, true, false);
 				colorDetected = detectColor();
+				if(colorDetected <= 0) 
+					tryDetectingAgain();
 				if(colorDetected <= 0) {
-					Navigation.moveStraight(Navigation.RING_DETECTION_DISTANCE_BOTTOM, false, false);
+					Navigation.moveStraight(RING_DETECTION_DISTANCE_BOTTOM, false, false);
 					detectTopRings();
 					top = true;
-					Navigation.moveStraight(Navigation.RING_DETECTION_DISTANCE_TOP, true, false);
+					Navigation.moveStraight(RING_DETECTION_DISTANCE_TOP, true, false);
 					colorDetected = detectColor();
+					if(colorDetected <= 0) 
+						tryDetectingAgain();
+					Navigation.moveStraight(RING_DETECTION_DISTANCE_TOP, true, false);
+				} else {
+					Navigation.moveStraight(RING_DETECTION_DISTANCE_BOTTOM, false, false);
 				}
 				Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
 			}
@@ -134,10 +156,21 @@ public class RingController {
 			Navigation.findLineStraight(true, RING_PICKUP_SPEED, RING_PICKUP_ACCEL);
 		}
 		
+		Navigation.findLineStraight(false, RING_PICKUP_SPEED, RING_PICKUP_ACCEL);
+		
 		resetArms();
 	}
 	
 
+	public static int tryDetectingAgain() {
+		Navigation.moveStraight(1, true, false);
+		Navigation.turnRobot(7, true, false, 100, 1000);
+		int colorDetected = 0;
+		colorDetected = detectColor();
+		Navigation.turnRobot(7, false, false, 100, 1000);
+		Navigation.moveStraight(1, false, false);
+		return colorDetected;
+	}
 	
 	public static int detectColor() {
 		

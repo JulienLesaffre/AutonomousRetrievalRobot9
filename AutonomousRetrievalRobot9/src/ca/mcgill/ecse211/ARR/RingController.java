@@ -23,8 +23,8 @@ public class RingController {
 	
 	
 	//speed and acceleration
-	private static final int COLOR_DETECTION_SPEED = 190;
-	private static final int COLOR_DETECTION_ACCEL = 1000;
+	private static final int COLOR_DETECTION_SPEED = 240;
+	private static final int COLOR_DETECTION_ACCEL = 1400;
 	private static final int RING_PICKUP_SPEED = 230;
 	private static final int RING_PICKUP_ACCEL = 1700;
 	private static final int CLAW_GRAB_SPEED = 250;
@@ -41,6 +41,7 @@ public class RingController {
 	private static final double RING_DETECTION_DISTANCE_TOP = 4.7;
 	private static final double RING_DETECTION_DISTANCE_BOTTOM = 6.0;
 	
+	public static boolean shouldWeTurn = false;
 	
 	
 	/**
@@ -63,12 +64,31 @@ public class RingController {
 		//expects to be on grid intersection of one of four sides and facing it
 		grabRing();
 		for(int i = 0; i < 3; i++) {
-			Navigation.turnRobot(90, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
-			Navigation.findLineStraight(true, RING_PICKUP_SPEED, RING_PICKUP_ACCEL);
+			double[] tunnelMidpointEnd = Navigation.findTunnelMidpoint(false);
+			if(!Navigation.isRingSetToLeft() && i == 1 && Navigation.hasArrived(Navigation.targetCoordinate[0], Navigation.targetCoordinate[1], 5)) {
+				if(Navigation.hasArrived(tunnelMidpointEnd[0], tunnelMidpointEnd[1], (int)(Navigation.SQUARE_SIZE*1.5))) {
+					Navigation.turnRobot(60, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+					Navigation.moveStraight(12, true, false);
+				}	else {
+					Navigation.turnRobot(90, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+				}
+			} else if(Navigation.isRingSetToLeft() && i == 0 && Navigation.hasArrived(Navigation.targetCoordinate[0], Navigation.targetCoordinate[1], (int)(Navigation.SQUARE_SIZE*2))) {
+				if(Navigation.hasArrived(tunnelMidpointEnd[0], tunnelMidpointEnd[1], (int)(Navigation.SQUARE_SIZE*1.75))) {
+					shouldWeTurn = true;
+					Navigation.turnRobot(60, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+					Navigation.moveStraight(12, true, false);
+				}	else {
+					Navigation.turnRobot(90, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+				}
+			} else {
+				Navigation.turnRobot(90, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+			}
+//			Navigation.turnRobot(90, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+			Navigation.findLineStraight(true, RING_PICKUP_SPEED, RING_PICKUP_ACCEL, true);
 			Navigation.turnRobot(90, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
-			Navigation.findLineStraight(true, RING_PICKUP_SPEED, RING_PICKUP_ACCEL);
+			Navigation.findLineStraight(true, RING_PICKUP_SPEED, RING_PICKUP_ACCEL, true);
 			Navigation.turnRobot(90, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
-			Navigation.findLineStraight(false, RING_PICKUP_SPEED, RING_PICKUP_ACCEL);
+			Navigation.findLineStraight(false, RING_PICKUP_SPEED, RING_PICKUP_ACCEL, true);
 			grabRing();
 		}
 		
@@ -96,9 +116,10 @@ public class RingController {
 		//turn so ring set is to the left of robot
 		int colorDetected = -1;
 		Navigation.setupHeadingForDetection(true);	
-		Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
+		Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL, true);
 		Navigation.turnRobot(90, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
-		Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
+		Navigation.moveStraight(3, true, false);
+		Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL, true);
 		Navigation.turnRobot(90, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
 		
 		detectTopRings();
@@ -106,7 +127,7 @@ public class RingController {
 		for(int i = 0; i < 4; i++) {
 			if(i!=0) {
 				Navigation.turnRobot(90, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
-				Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
+				Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL, true);
 			}
 
 			if(top) {
@@ -126,7 +147,7 @@ public class RingController {
 				} else {
 					Navigation.moveStraight(RING_DETECTION_DISTANCE_TOP, false, false);
 				}
-				Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
+				Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL, true);
 			} else {
 				Navigation.moveStraight(RING_DETECTION_DISTANCE_BOTTOM, true, false);
 				colorDetected = detectColor();
@@ -144,19 +165,37 @@ public class RingController {
 				} else {
 					Navigation.moveStraight(RING_DETECTION_DISTANCE_BOTTOM, false, false);
 				}
-				Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL);
+				Navigation.findLineStraight(false, COLOR_DETECTION_SPEED, COLOR_DETECTION_ACCEL, true);
 			}
 			
 			if(i == 3) //dont move to next grid intersection on last detect so you can pick up rings
 				continue;
 			
-			Navigation.turnRobot(90, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
-			Navigation.findLineStraight(true, RING_PICKUP_SPEED, RING_PICKUP_ACCEL);
+			double[] tunnelMidpointEnd = Navigation.findTunnelMidpoint(false);
+			if(!Navigation.isRingSetToLeft() && i == 0 && Navigation.hasArrived(Navigation.targetCoordinate[0], Navigation.targetCoordinate[1], 5)) {
+				if(Navigation.hasArrived(tunnelMidpointEnd[0], tunnelMidpointEnd[1], (int)(Navigation.SQUARE_SIZE*1.5))) {
+					Navigation.turnRobot(60, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+					Navigation.moveStraight(12, true, false);
+				} else {
+					Navigation.turnRobot(90, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+				}
+			} else if(Navigation.isRingSetToLeft() && i == 3 && Navigation.hasArrived(Navigation.targetCoordinate[0], Navigation.targetCoordinate[1], (int)(Navigation.SQUARE_SIZE*1.5))) {
+				if(Navigation.hasArrived(tunnelMidpointEnd[0], tunnelMidpointEnd[1], (int)(Navigation.SQUARE_SIZE*1.5))) {
+					Navigation.turnRobot(60, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+					Navigation.moveStraight(12, true, false);
+				} else {
+					Navigation.turnRobot(90, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+				}
+			} else {
+				Navigation.turnRobot(90, true, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+			}
+
+			Navigation.findLineStraight(true, RING_PICKUP_SPEED, RING_PICKUP_ACCEL, true);
 			Navigation.turnRobot(90, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
-			Navigation.findLineStraight(true, RING_PICKUP_SPEED, RING_PICKUP_ACCEL);
+			Navigation.findLineStraight(true, RING_PICKUP_SPEED, RING_PICKUP_ACCEL, true);
 		}
 		
-		Navigation.findLineStraight(false, RING_PICKUP_SPEED, RING_PICKUP_ACCEL);
+		Navigation.findLineStraight(false, RING_PICKUP_SPEED, RING_PICKUP_ACCEL, true);
 		
 		resetArms();
 	}

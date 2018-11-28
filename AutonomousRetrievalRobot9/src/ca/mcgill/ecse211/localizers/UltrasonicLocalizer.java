@@ -16,7 +16,7 @@ import lejos.robotics.SampleProvider;
 public class UltrasonicLocalizer {
 
 	//constants
-	private static final int USLOC_MOTOR_SPEED = 170;
+	private static final int USLOC_MOTOR_SPEED = 190;
 	private static final int USLOC_MOTOR_ACCELERATION = 2000;
 	private static final int D_THRESHHOLD = 30;
 	private static final int NOISE_MARGIN = 5;
@@ -132,6 +132,8 @@ public class UltrasonicLocalizer {
 				break;
 			}
 		}
+		
+		Navigation.turnRobot(40, false, false, USLOC_MOTOR_SPEED, USLOC_MOTOR_ACCELERATION);
 
 		// Find second falling edge
 		while (true) {
@@ -141,6 +143,7 @@ public class UltrasonicLocalizer {
 			
 			// Go backwards and get odometer data
 			odometer = Odometer.getOdometer().getXYT();
+
 			leftMotor.backward();
 			rightMotor.forward();
 

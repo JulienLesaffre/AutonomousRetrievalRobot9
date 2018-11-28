@@ -21,6 +21,8 @@ import java.util.Map;
  * One size tunnel - all the parts too with the if its horizontal/vertical
  * edge case the one next to water, the one next to wall
  * 
+ * READ THE WIFI PDF, it might say why the timer is not starting
+ * did not take case into consideration start 00, at 22 and 34
  * 
  */
 
@@ -181,8 +183,6 @@ public class AutonomousRetrievalRobot {
 		
 		clawMotor.rotateTo(135);
 		clawMotor.flt();
-
-//		Button.waitForAnyPress();
 
 		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		

@@ -41,16 +41,16 @@ public class Navigation {
 	public static int TG_x = 6;
 	public static int TG_y = 5;
 	
-	public static int field_X_Max = 8;
+	public static int field_X_Max = 15;
 	public static int field_X_Min = 0;
-	public static int field_Y_Max = 8;
+	public static int field_Y_Max = 9;
 	public static int field_Y_Min = 0;
 	
 	//Speed and acceleration
-	public static final int ROTATE_SPEED_SLOW = 100;
-	public static final int ROTATE_ACCEL_SLOW = 700;
-	public static final int ROTATE_SPEED_FAST = 170;
-	public static final int ROTATE_ACCEL_FAST = 1000;
+	public static final int ROTATE_SPEED_SLOW = 170;
+	public static final int ROTATE_ACCEL_SLOW = 1300;
+	public static final int ROTATE_SPEED_FAST = 230;
+	public static final int ROTATE_ACCEL_FAST = 1400;
 	private static final int NAV_WITH_CORR_SPEED = 265;
 	private static final int NAV_WITH_CORR_ACCEL = 1700;
 	private static final int TUNNEL_SPEED = 230;
@@ -63,7 +63,8 @@ public class Navigation {
 	public static final double SQUARE_SIZE = 30.48;
 	public static final double SENSOR_OFFSET = 6.1;
 	private static final double TUNNEL_DISTANCE_PASS = SQUARE_SIZE * 2.75;
-	private static final int RIGHT_TURN_ANGLE_CORRECTION = 15;
+	private static final double TUNNEL_DISTANCE_PASS_ONE_TILE = SQUARE_SIZE * 1.75;
+	private static final int RIGHT_TURN_ANGLE_CORRECTION = 0;
 	
 
 	//Association variables
@@ -78,7 +79,8 @@ public class Navigation {
 	
 	//Class variables
 	private static boolean isTunnelVertical;
-	private static double[] targetCoordinate = new double[2];
+	private static boolean isOneTile = false;
+	public static double[] targetCoordinate = new double[2];
 	
 	
 	//sensor values
@@ -104,7 +106,6 @@ public class Navigation {
 	}
 	
 	
-	//did not take case into consideration start 00, at 22 and 34
 	/**
 	 * Method asssumes robot done localizing, takes coordinates and calculates the trajectory 
 	 * to the tunnel based on four cases. If the tunnel is placed vertically, it travels first horizontally
@@ -139,7 +140,6 @@ public class Navigation {
 			//CASE 1
 			if(isTunnelWithinOneTile(tunnelMidpoint[0], myX)) {
 				
-				
 				//turn away from tunnel midpoint
 				if(tunnelMidpoint[0] < myX)	turnTo(90, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false); 
 				else turnTo(270, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false);
@@ -159,18 +159,18 @@ public class Navigation {
 					travelToWithCorrection(myX, tunnelMidpoint[1]+SQUARE_SIZE);
 				}
 				
-				
 				myX = odometer.getXYT()[0];
 				myY = odometer.getXYT()[1];
 				
 				//turn to travel remaining x distance to center of tunnel
 				if(tunnelMidpoint[0] < myX) turnTo(270, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false);
 				else turnTo(90, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false);
-				
 			}
 			
 			//CASE 2
 			else {
+				
+				System.out.println("good");
 				
 				//turn towards x value of tunnel midpoint and travel to the point before it in one tile
 				if(tunnelMidpoint[0] < myX) {
@@ -232,9 +232,7 @@ public class Navigation {
 				if(tunnelMidpoint[1] < myY) turnTo(180, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false);
 				else turnTo(0, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false);
 				
-				
 			} 
-			
 			//CASE 4
 			else {
 				
@@ -262,12 +260,11 @@ public class Navigation {
 				//turn towards tunnel y value
 				if(tunnelMidpoint[1] < myY) turnTo(180, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false);
 				else  turnTo(0, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false);
-				
 			}
 		}
 		
 		//now correct correct with second line essentially localizing
-		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 		
 		//move to tunnel center
 		moveStraight(SQUARE_SIZE/2, true, false);
@@ -279,13 +276,19 @@ public class Navigation {
 		double absAngle = Math.toDegrees(Math.atan2((tunnelMidpoint[0] - myX), (tunnelMidpoint[1] - myY)));
 		turnTo(absAngle, ROTATE_SPEED_SLOW, ROTATE_ACCEL_SLOW, true); 
 		
-		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 
 		leftMotor.setSpeed(NAV_WITH_CORR_SPEED + LEFT_MOTOR_SPEED_OFFSET);
 		rightMotor.setSpeed(NAV_WITH_CORR_SPEED);
 		leftMotor.setAcceleration(3000);
 		rightMotor.setAcceleration(3000);
-		moveStraight(TUNNEL_DISTANCE_PASS, true, false);
+		
+		if(isOneTile) {
+			moveStraight(TUNNEL_DISTANCE_PASS_ONE_TILE, true, false);
+		} else {
+			moveStraight(TUNNEL_DISTANCE_PASS, true, false);
+		}
+
 		
 		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 	}
@@ -321,19 +324,28 @@ public class Navigation {
 		if(isLeft && !isThereAWall(false)) {
 			System.out.println("1");
 			turnRobot(80, true, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
-			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
+			turnRobot(80, false, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 		} else if (isLeft) {
 			System.out.println("2");
 			turnRobot(80, false, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
-			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
+			turnRobot(80, true, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 		} else if(!isLeft && !isThereAWall(true)) {
 			System.out.println("3");
 			turnRobot(80, false, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
-			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
+			turnRobot(80, true, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
+			
 		} else if(!isLeft) {
 			System.out.println("4");
 			turnRobot(80, true, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
-			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
+			turnRobot(80, false, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 		}
 			
 		double myX = odometer.getXYT()[0];
@@ -348,9 +360,11 @@ public class Navigation {
 
 		//now move other axis to reach bottomRightTile
 		travelToWithCorrection(targetCoordinate[0], targetCoordinate[1]);
+
 		
 		RingController.makeSound(3);
 	}
+	
 	
 	public static boolean isThereAWall(boolean toTheLeft) {
 		double x = odometer.getXYT()[0];
@@ -390,10 +404,14 @@ public class Navigation {
 	
 	public static void ringSetToTunnel() throws OdometerExceptions {
 		Navigation.setupHeadingForDetection(false);	
-		while(!hasArrived(targetCoordinate[0], targetCoordinate[1], (int)SQUARE_SIZE/2)) {
-			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+		while(!hasArrived(targetCoordinate[0], targetCoordinate[1], 10)) {
+			if(RingController.shouldWeTurn) {
+				Navigation.turnRobot(60, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
+				Navigation.moveStraight(12, true, false);
+			}
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 			turnRobot(90, false, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
-			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 		}
 		
 		
@@ -434,10 +452,14 @@ public class Navigation {
 		turnToCoord(tunnelExitMidpoint[0], tunnelExitMidpoint[1], ROTATE_SPEED_SLOW, ROTATE_ACCEL_SLOW);
 
 
-		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
-		setSpeedAcceleration(TUNNEL_SPEED, TUNNEL_ACCEL);
+		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
+		leftMotor.setSpeed(NAV_WITH_CORR_SPEED + LEFT_MOTOR_SPEED_OFFSET);
+		rightMotor.setSpeed(NAV_WITH_CORR_SPEED);
+		leftMotor.setAcceleration(3000);
+		rightMotor.setAcceleration(3000);
+
 		moveStraight(TUNNEL_DISTANCE_PASS, true, false);
-		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 
 	}
 	
@@ -505,7 +527,7 @@ public class Navigation {
 	
 	
 	
-	
+	//TODO
 	public static void travelTunnelToStart() throws OdometerExceptions {
 		double startCornerCoordX = -1, startCornerCoordY = 1;
 		int startingCorner = RedTeam == 9 ? RedCorner : GreenCorner;
@@ -727,6 +749,7 @@ public class Navigation {
 			turnTo(absAngle, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false); 
 			
 			
+			
 			setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 			
 			//we either move to a line or to half a tile, if its half move straight without correction
@@ -734,8 +757,10 @@ public class Navigation {
 				moveStraight(dist, true, false);
 			} else  {
 				
-				leftMotor.rotate(15, true);
-				rightMotor.rotate(-15, false);
+				//TODO
+				
+				leftMotor.rotate(7, true);
+				rightMotor.rotate(-7, false);
 				
 				double oldSampleRight = 0;
 				double oldSampleLeft = 0;
@@ -792,7 +817,7 @@ public class Navigation {
 	 * @return : true if its within the distance
 	 * @throws OdometerExceptions
 	 */
-	private static boolean hasArrived(double xd, double yd, int errorMargin) throws OdometerExceptions {
+	public static boolean hasArrived(double xd, double yd, int errorMargin) throws OdometerExceptions {
 		double odometer[] = { 0, 0, 0 };
 		odometer = Odometer.getOdometer().getXYT();
 		double xf = odometer[0];
@@ -854,15 +879,68 @@ public class Navigation {
 	 * and sets the class variable isTunnelVertical accordingly.
 	 */
 	public static void findTunnelHeading() {
-		int TN_LL_x, TN_UR_x;
+		int tn_LL_x, tn_UR_x,tn_LL_y, tn_UR_y;
 		if(RedTeam == 9) {
-			TN_LL_x = TNR_LL_x;
-			TN_UR_x = TNR_UR_x;
+			tn_LL_x = TNR_LL_x;
+			tn_UR_x = TNR_UR_x;
+			tn_LL_y = TNR_LL_y;
+			tn_UR_y = TNR_UR_y;
 		} else {
-			TN_LL_x = TNG_LL_x;
-			TN_UR_x = TNG_UR_x;
+			tn_LL_x = TNG_LL_x;
+			tn_UR_x = TNG_UR_x;
+			tn_LL_y = TNG_LL_y;
+			tn_UR_y = TNG_UR_y;
 		}
-		isTunnelVertical = (Math.abs(TN_LL_x - TN_UR_x) == 2) ? false : true;
+		if((Math.hypot(tn_UR_x - tn_LL_x, tn_UR_y - tn_LL_y)*SQUARE_SIZE) < 45) {
+			isOneTile = true;
+			int team_LL_x, team_LL_y, team_UR_x, team_UR_y;
+			int startingCorner = -1;
+			if(RedTeam == 9) {
+				team_LL_x = Red_LL_x; 
+				team_LL_y = Red_LL_y; 
+				team_UR_x = Red_UR_x; 
+				team_UR_y = Red_UR_y; 
+				startingCorner = RedCorner;
+			} else {
+				team_LL_x = Green_LL_x; 
+				team_LL_y = Green_LL_y; 
+				team_UR_x = Green_UR_x; 
+				team_UR_y = Green_UR_y; 
+				startingCorner = GreenCorner;
+			}
+			switch(startingCorner) {
+			case 0:
+				System.out.println("yessss");
+				if(tn_LL_y == team_UR_y) {
+					isTunnelVertical = true;
+				} 
+				break;
+			case 1:
+				System.out.println("entered");
+				System.out.println("" + tn_LL_y);
+				System.out.println("" + team_UR_y);
+				if(tn_LL_y == team_UR_y) 
+					isTunnelVertical = true;
+				break;
+			case 2:
+				System.out.println("yessss");
+				if(tn_UR_y == team_LL_y) {
+					isTunnelVertical = true;
+				}
+				break;
+			case 3:
+				System.out.println("yessss");
+				if(tn_UR_y == team_LL_y) {
+					isTunnelVertical = true;
+				}
+				break;
+			}
+		} else {
+			System.out.println("nooo");
+			isTunnelVertical = (Math.abs(tn_LL_x - tn_UR_x) == 2) ? false : true;
+		}
+				
+
 	}
 	
 	/**
@@ -914,6 +992,7 @@ public class Navigation {
 			midpoint2[1] = (tunnelUR[1]) * SQUARE_SIZE;
 			midpoint2[0] = (tunnelUR[0] - 0.5) * SQUARE_SIZE;
 		} else {
+			System.out.println("comes here");
 			midpoint1[0] = (tunnelLL[0]) * SQUARE_SIZE;
 			midpoint1[1] = (tunnelLL[1] + 0.5) * SQUARE_SIZE;
 			midpoint2[0] = (tunnelUR[0]) * SQUARE_SIZE;
@@ -929,22 +1008,23 @@ public class Navigation {
 			
 		double myX, myY;
 		
+
 		switch(startingCorner) {
 		case 0:
 			myX = (Navigation.SQUARE_SIZE);
 			myY = (Navigation.SQUARE_SIZE);
 			break;
 		case 1:
-			myX = (7.0 * Navigation.SQUARE_SIZE);
+			myX = ((field_X_Max-1) * Navigation.SQUARE_SIZE);
 			myY = (Navigation.SQUARE_SIZE);
 			break;
 		case 2:
-			myX = (7.0 * Navigation.SQUARE_SIZE);
-			myY = (7.0 * Navigation.SQUARE_SIZE);
+			myX = ((field_X_Max-1) * Navigation.SQUARE_SIZE);
+			myY = ((field_Y_Max-1) * Navigation.SQUARE_SIZE);
 			break;
 		case 3:
 			myX = (Navigation.SQUARE_SIZE);
-			myY = (7.0 * Navigation.SQUARE_SIZE);
+			myY = ((field_Y_Max-1) * Navigation.SQUARE_SIZE);
 			break;
 		default:
 			myX = (Navigation.SQUARE_SIZE);
@@ -978,7 +1058,7 @@ public class Navigation {
 	 * This method find the first line ahead when starting the localization.
 	 * @throws OdometerExceptions
 	 */
-	public static void findLineStraight(boolean forwards, int speed, int acceleration) throws OdometerExceptions {
+	public static void findLineStraight(boolean forwards, int speed, int acceleration, boolean shouldWeCorrect) throws OdometerExceptions {
 		
 		float[] newColorLeft = {0};
 		float oldSampleLeft = 0;
@@ -1025,7 +1105,8 @@ public class Navigation {
 			}
 		}
 		
-		correctOdometer();
+		if(shouldWeCorrect) 
+			correctOdometer();
 		moveStraight(SENSOR_OFFSET, true, false);
 	}
 	
@@ -1049,10 +1130,10 @@ public class Navigation {
 		else { // turn right
 			leftMotor.rotate(convertAngle( dTheta), true);
 			rightMotor.rotate(-convertAngle( dTheta), false);
-			if(rightCorrection) {
-				leftMotor.rotate(RIGHT_TURN_ANGLE_CORRECTION, true);
-				rightMotor.rotate(-RIGHT_TURN_ANGLE_CORRECTION, false);
-			}
+//			if(rightCorrection) {
+//				leftMotor.rotate(RIGHT_TURN_ANGLE_CORRECTION, true);
+//				rightMotor.rotate(-RIGHT_TURN_ANGLE_CORRECTION, false);
+//			}
 
 		}
 	}

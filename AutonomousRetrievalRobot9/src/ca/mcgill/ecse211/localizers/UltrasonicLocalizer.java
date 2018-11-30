@@ -60,7 +60,7 @@ public class UltrasonicLocalizer {
 	/**
 	 * This method is used to process the data from the ultrasonic sensor. It filters
 	 * out the very large values.
-	 * @param d
+	 * @param d Distance value as int
 	 */
 	public void processUSData(int d) {
 		// filter bad values
@@ -133,6 +133,7 @@ public class UltrasonicLocalizer {
 			}
 		}
 		
+		//turn 40 degrees to avoid detecting the same wall twice 
 		Navigation.turnRobot(40, false, false, USLOC_MOTOR_SPEED, USLOC_MOTOR_ACCELERATION);
 
 		// Find second falling edge

@@ -17,14 +17,6 @@ import lejos.hardware.sensor.SensorModes;
 import lejos.robotics.SampleProvider;
 import java.util.Map;
 
-/*
- * One size tunnel - all the parts too with the if its horizontal/vertical
- * edge case the one next to water, the one next to wall
- * 
- * READ THE WIFI PDF, it might say why the timer is not starting
- * did not take case into consideration start 00, at 22 and 34
- * 
- */
 
 /**
  * This is the main execution class for the robot.
@@ -53,9 +45,8 @@ public class AutonomousRetrievalRobot {
 	private static EV3LargeRegulatedMotor dumpRingMotor;
 	private static EV3MediumRegulatedMotor clawMotor;
 
-	
 	//wifi connection parameters
-	private static final String SERVER_IP = "192.168.2.13";
+	private static final String SERVER_IP = "192.168.2.2";
 	private static final int TEAM_NUMBER = 9;
 	private static final boolean ENABLE_DEBUG_WIFI_PRINT = true;
 
@@ -76,6 +67,7 @@ public class AutonomousRetrievalRobot {
 		clawMotor = new EV3MediumRegulatedMotor(LocalEV3.get().getPort("B"));
 		dumpRingMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("C"));
 		
+		
 		//sensors
 		SensorModes myColorLeft = new EV3ColorSensor(LocalEV3.get().getPort("S2"));
 		leftSampleProvider = myColorLeft.getMode("Red");
@@ -86,14 +78,13 @@ public class AutonomousRetrievalRobot {
 		colorSensor = new EV3ColorSensor(LocalEV3.get().getPort("S4"));
 		colorSampleProvider = colorSensor.getMode("RGB");
 		
-
-
+		
 		//start odometer thread
 		odometer = Odometer.getOdometer(leftMotor, rightMotor, Navigation.TRACK, Navigation.WHEEL_RAD);
 		Thread odoThread = new Thread(odometer);
 		odoThread.start();
 		
-       
+		
 		//initialize classes with required ev3 sensors and motors
 		nav = new Navigation(leftSampleProvider, rightSampleProvider, odometer, leftMotor, rightMotor); 
 		usLocalizer = new UltrasonicLocalizer(odometer, usSampleProvider, leftMotor, rightMotor);
@@ -115,7 +106,6 @@ public class AutonomousRetrievalRobot {
 
 		// Connect to server and get the data, catching any errors that might occur
 		try {
-			
 			//waits till start button pushed
 			//can kill while waiting by pressing escape button
 			@SuppressWarnings("rawtypes")
@@ -150,7 +140,6 @@ public class AutonomousRetrievalRobot {
 			Navigation.TR_y = ((Long) data.get("TR_y")).intValue();
 			Navigation.TG_x = ((Long) data.get("TG_x")).intValue();
 			Navigation.TG_y = ((Long) data.get("TG_y")).intValue();
-
 		} catch (Exception e) {
 			//throws exception when: wrong IP, server not running, not connected to WIFI
 			//also throws exception if: recieves bad data, message from server, e.g. make sure TEAM numb correct
@@ -162,16 +151,18 @@ public class AutonomousRetrievalRobot {
 	
 	
 	/**
-	 * This method expects the pole to be in any position, and the claw medium motor to be
-	 * at the max rotated in the negative direction. It raises the pole until it stalls
-	 * where the motor stops and resets the tachometer count so that all movement afterwards
-	 * is with rotateTo. Expects the motor variables to be initialized and connected to the ports.
+	 * This method expects the claw to be extended fully and the arms with the 
+	 * light sensor attached should be down. It resets the tacho count of the 
+	 * motors for the claw and arms so that we can rotateTo instead of rotate 
+	 * for accuracy. Sets the starting position of the claw to be hooked.
 	 */
 	public static void initializeMotors() {
 		dumpRingMotor.resetTachoCount();
 		clawMotor.resetTachoCount();
 		clawMotor.setAcceleration(4000);
 		clawMotor.setSpeed(250);
+		clawMotor.rotateTo(135);		//sets the start
+		clawMotor.flt();
 	}
 	
 	
@@ -179,11 +170,8 @@ public class AutonomousRetrievalRobot {
 		
 		initialize(); 									//initialize class variables needed
 
-		initializeMotors();
+		initializeMotors();								//initialize tacho count of arms motor and claw motor
 		
-		clawMotor.rotateTo(135);
-		clawMotor.flt();
-
 		retrieveDataFromServer();						//connect to the server and wait to recieve variables
 		
 		usLocalizer.fallingEdge();						//us localize
@@ -194,16 +182,15 @@ public class AutonomousRetrievalRobot {
 		
 		Navigation.travelTunnelToRingSet();				//travel from tunnel to ring set
 		
-
-		RingController.detectAllRings();
+		RingController.detectAllRings();				//detect all rings
 		
-		RingController.pickUpRings();
+		RingController.pickUpRings();					//pick up all rings
 		
-		Navigation.ringSetToTunnel();
+		Navigation.ringSetToTunnel();					//move back to and through tunnel
 		
-		Navigation.travelTunnelToStart();
+		Navigation.travelTunnelToStart();				//move to starting corner
 		
-		RingController.dropRings();
+		RingController.dropRings();						//drop rings
 		
 	}
 }

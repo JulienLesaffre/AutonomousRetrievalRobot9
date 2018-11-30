@@ -38,9 +38,8 @@ public class Navigation {
 	public static int TNG_UR_y = 1;
 	public static int TR_x = 6;
 	public static int TR_y = 6;
-	public static int TG_x = 6;
-	public static int TG_y = 5;
-	
+	public static int TG_x = -1;
+	public static int TG_y = -1;
 	public static int field_X_Max = 15;
 	public static int field_X_Min = 0;
 	public static int field_Y_Max = 9;
@@ -53,9 +52,8 @@ public class Navigation {
 	public static final int ROTATE_ACCEL_FAST = 1400;
 	private static final int NAV_WITH_CORR_SPEED = 265;
 	private static final int NAV_WITH_CORR_ACCEL = 1700;
-	private static final int TUNNEL_SPEED = 230;
-	private static final int TUNNEL_ACCEL = 1500;
 	private static final int LEFT_MOTOR_SPEED_OFFSET = 6;
+	
 	
 	//distance and angle measurements
 	public static final double WHEEL_RAD = 2.2;
@@ -64,9 +62,8 @@ public class Navigation {
 	public static final double SENSOR_OFFSET = 6.1;
 	private static final double TUNNEL_DISTANCE_PASS = SQUARE_SIZE * 2.75;
 	private static final double TUNNEL_DISTANCE_PASS_ONE_TILE = SQUARE_SIZE * 1.75;
-	private static final int RIGHT_TURN_ANGLE_CORRECTION = 0;
 	
-
+	
 	//Association variables
 	private static Odometer odometer;
 	private static boolean isNavigating;
@@ -81,7 +78,6 @@ public class Navigation {
 	private static boolean isTunnelVertical;
 	private static boolean isOneTile = false;
 	public static double[] targetCoordinate = new double[2];
-	
 	
 	//sensor values
 	public static final double LIGHT_THRESHOLD = 0.26;
@@ -263,7 +259,7 @@ public class Navigation {
 			}
 		}
 		
-		//now correct correct with second line essentially localizing
+		//now correct with second line essentially localizing
 		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 		
 		//move to tunnel center
@@ -276,20 +272,24 @@ public class Navigation {
 		double absAngle = Math.toDegrees(Math.atan2((tunnelMidpoint[0] - myX), (tunnelMidpoint[1] - myY)));
 		turnTo(absAngle, ROTATE_SPEED_SLOW, ROTATE_ACCEL_SLOW, true); 
 		
+		//first correct on tunnel entrance lines
 		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 
-		leftMotor.setSpeed(NAV_WITH_CORR_SPEED + LEFT_MOTOR_SPEED_OFFSET);
+		//with no correction the robot steers towards left, increase speed for duration of tunnel
+		//in order to avoid collision
+		leftMotor.setSpeed(NAV_WITH_CORR_SPEED + LEFT_MOTOR_SPEED_OFFSET);		
 		rightMotor.setSpeed(NAV_WITH_CORR_SPEED);
 		leftMotor.setAcceleration(3000);
 		rightMotor.setAcceleration(3000);
 		
+		//now move through tunnel depending on tunnel size
 		if(isOneTile) {
 			moveStraight(TUNNEL_DISTANCE_PASS_ONE_TILE, true, false);
 		} else {
 			moveStraight(TUNNEL_DISTANCE_PASS, true, false);
 		}
 
-		
+		//correct for future movement
 		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 	}
 	
@@ -297,51 +297,52 @@ public class Navigation {
 
 
 	/**
-	 * This method takes the robot from just having gone outside the tunnel to the ring set
-	 * so that it is in position to start circling the set detecting the ring colors. There
-	 * are two cases of traversing. Since the robot ends in middle of tunnel tile and ring 
-	 * sets are placed on intersections, the set will either be to the left or right of tunnel.
-	 * If to the left we move to the closest tile (bottom right of four surrounding tiles relative
-	 * to the robot heading and placement of ring set), if to the right we move to bottom right of 
-	 * four surrounding tiles. It then aligns the robot to start traversing the ring set in a 
-	 * clockwise direction.
+	 * This method takes the robot from just having gone outside the tunnel to the ring set.
+	 * If the ringset is to the left of the robot upon exiting tunnel, it travels to the tile intersection
+	 * to the right of it, else if the ringset is to the right it travels to the tile intersection to the 
+	 * left of it.
 	 * @throws OdometerExceptions
 	 */
 	public static void travelTunnelToRingSet() throws OdometerExceptions {
 		
 		String heading = getCurrentHeading();
-//		double[] tunnelEndMidpoint = findTunnelMidpoint(false);
 
 		//if ring is to left, go to tile intersection to the right of it relative to robot position
 		//else if ring is right, go to tile intersection below it relative to robot position
 		boolean isLeft = isRingSetToLeft();
+		
+		//retrieve the coordinates the robot should travel to
 		if(isLeft)
 			targetCoordinate = getTargetCoordinate(true);
 		else 
 			targetCoordinate = getTargetCoordinate(false);
 		
 
+		//if the ringset is to the left, there can only be a wall on the right side of robot,
+		//check if there is a wall, if so move to left upon exiting tunnel
 		if(isLeft && !isThereAWall(false)) {
-			System.out.println("1");
 			turnRobot(80, true, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
 			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 			turnRobot(80, false, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
 			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
-		} else if (isLeft) {
-			System.out.println("2");
+		} 
+		//else if ringset is to left, turn robot to right to account for case where rinset is directly on line to the left upon exiting tunnel
+		else if (isLeft) {
 			turnRobot(80, false, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
 			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 			turnRobot(80, true, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
 			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
-		} else if(!isLeft && !isThereAWall(true)) {
-			System.out.println("3");
+		} 
+		//if the ringset is to the right, there can only be a wall on the left side of robot,
+		//check if there is a wall, if so move to the right upon exiting tunnel
+		else if(!isLeft && !isThereAWall(true)) {
 			turnRobot(80, false, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
 			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 			turnRobot(80, true, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
 			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
-			
-		} else if(!isLeft) {
-			System.out.println("4");
+		} 
+		//else if ringset is to right, turn robot to left to account for case where rinset is directly on line to the right upon exiting tunnel
+		else if(!isLeft) {
 			turnRobot(80, true, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
 			findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 			turnRobot(80, false, false, ROTATE_SPEED_FAST, ROTATE_ACCEL_SLOW);
@@ -350,61 +351,83 @@ public class Navigation {
 			
 		double myX = odometer.getXYT()[0];
 		double myY = odometer.getXYT()[1];
+		
 		//travel first in direction you are currently traveling in
-		//if traveling north/south, move to y of bottomRightTile
+		//if traveling north/south, move to y of target coordinate
 		if(heading.equalsIgnoreCase("north") || heading.equalsIgnoreCase("south")) 
 			travelToWithCorrection(myX, targetCoordinate[1]);
-		//if traveling east/west, move to x of bottomRightTile
+		//if traveling east/west, move to x of target coordinate
 		else
 			travelToWithCorrection(targetCoordinate[0], myY);
 
-		//now move other axis to reach bottomRightTile
+		//now move other axis to reach target coordinate
 		travelToWithCorrection(targetCoordinate[0], targetCoordinate[1]);
 
-		
+		//announce arrival
 		RingController.makeSound(3);
 	}
 	
 	
+	/**
+	 * This method takes in the current position of the robot, and checks to see if there is a wall within 1 tile
+	 * to the left or right of the robot. It is used for cases where the tunnel is against the wall, upon exiting the tunnel,
+	 * so that it knows to turn the other direction and not hit the wall.
+	 * @param toTheLeft Whether the method should check if there is a wall to the left or right of the robot.
+	 * @return
+	 */
 	public static boolean isThereAWall(boolean toTheLeft) {
-		double x = odometer.getXYT()[0];
-		double y = odometer.getXYT()[1];
+		double currentX = odometer.getXYT()[0];
+		double currentY = odometer.getXYT()[1];
 		String heading = getCurrentHeading();
+		
+		//assumes robot is in middle of tunnel tile, subtracting or adding 1 tile length
+		//depending on heading and toTheLeft boolean should allow check for whether wall exists
 		if(toTheLeft) {
 			if(heading.equalsIgnoreCase("north")) { 						
-				if(x - SQUARE_SIZE < 0)
+				if(currentX - SQUARE_SIZE < 0)
 					return true;
 			} else if (heading.equalsIgnoreCase("east")) {					
-				if(y + SQUARE_SIZE > field_Y_Max)
+				if(currentY + SQUARE_SIZE > field_Y_Max)
 					return true;
 			} else if (heading.equalsIgnoreCase("south")) { 			
-				if(x + SQUARE_SIZE > field_X_Max)
+				if(currentX + SQUARE_SIZE > field_X_Max)
 					return true;
 			} else if (heading.equalsIgnoreCase("west")) { 				
-				if(y - SQUARE_SIZE < 0)
+				if(currentY - SQUARE_SIZE < 0)
 					return true;
 			}
 		} else {
 			if(heading.equalsIgnoreCase("north")) { 
-				if(x + SQUARE_SIZE > field_X_Max)
+				if(currentX + SQUARE_SIZE > field_X_Max)
 					return true;
 			} else if (heading.equalsIgnoreCase("east")) {		
-				if(y - SQUARE_SIZE < 0)
+				if(currentY - SQUARE_SIZE < 0)
 					return true;
 			} else if (heading.equalsIgnoreCase("south")) { 		
-				if(x - SQUARE_SIZE < 0)
+				if(currentX - SQUARE_SIZE < 0)
 					return true;
 			} else if (heading.equalsIgnoreCase("west")) { 				
-				if(y + SQUARE_SIZE > field_Y_Max)
+				if(currentY + SQUARE_SIZE > field_Y_Max)
 					return true;
 			}
 		}
 		return false;
 	}
 	
+	
+	/**
+	 * This method assumes the robot has finished picking up the rings and takes the robot to and through the tunnel.
+	 * The robot picks up the rings by moving anti clockwise. Since it starts off at the target coordinate it first moved
+	 * to to reach the ringset, we move the robot in anti clockwise until it reaches the coordinate again to easily avoid
+	 * hitting the ringset.
+	 * @throws OdometerExceptions
+	 */
 	public static void ringSetToTunnel() throws OdometerExceptions {
 		Navigation.setupHeadingForDetection(false);	
+		
+		//until we arrive to the target coordinate, move anticlockwise correcting on the lines
 		while(!hasArrived(targetCoordinate[0], targetCoordinate[1], 10)) {
+			//if there is an edge of the tunnel ahead, move by 60 degrees instead to avoid the edge
 			if(RingController.shouldWeTurn) {
 				Navigation.turnRobot(60, false, false, Navigation.ROTATE_SPEED_FAST, Navigation.ROTATE_ACCEL_FAST);
 				Navigation.moveStraight(12, true, false);
@@ -415,20 +438,21 @@ public class Navigation {
 		}
 		
 		
-		
-		//now it should be where it first started, now go to closest upper tile to midpoint point
 		double myX = odometer.getXYT()[0];
 		double myY = odometer.getXYT()[1];
 		myX = odometer.getXYT()[0];
 		myY = odometer.getXYT()[1];
+		
+		//now it should be where it first started, now go to closest upper tile to midpoint point
 		double[] destination = findClosestTunnelSideCoordinates();
 		double[] tunnelExitMidpoint = findTunnelMidpoint(false);
 		double[] tunnelExitMidpointPlusOne = findTunnelExitMidpointPlusTile();
 
 		
-		//if distance from nearest grid intersection to target coordinate is larger than 45, need to do one extra movement
+		//if distance to the tunnel midpoint is smaller than 45, it is already at the desired intersection and can just move to the tunnel
+		//exit midpoint, else move first perpendicular to tunnel orientation
 		double distanceToTunnel = Math.hypot(tunnelExitMidpointPlusOne[0] - myX, tunnelExitMidpointPlusOne[1] - myY);
-		if(distanceToTunnel > SQUARE_SIZE) {
+		if(distanceToTunnel > 45) {
 			if(!isTunnelVertical) {
 				travelToWithCorrection(destination[0], myY);
 				travelToWithCorrection(destination[0], destination[1]);
@@ -440,6 +464,8 @@ public class Navigation {
 
 		myX = odometer.getXYT()[0];
 		myY = odometer.getXYT()[1];
+		
+		//travel to tunnel exit midpoint plue one tile
 		if(isTunnelVertical) {
 			travelToWithCorrection(tunnelExitMidpointPlusOne[0], myY);
 			travelToWithCorrection(tunnelExitMidpointPlusOne[0], tunnelExitMidpointPlusOne[1]);
@@ -451,7 +477,7 @@ public class Navigation {
 		
 		turnToCoord(tunnelExitMidpoint[0], tunnelExitMidpoint[1], ROTATE_SPEED_SLOW, ROTATE_ACCEL_SLOW);
 
-
+		//now travel through the tunnel
 		findLineStraight(true, NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL, true);
 		leftMotor.setSpeed(NAV_WITH_CORR_SPEED + LEFT_MOTOR_SPEED_OFFSET);
 		rightMotor.setSpeed(NAV_WITH_CORR_SPEED);
@@ -464,6 +490,10 @@ public class Navigation {
 	}
 	
 	
+	/**
+	 * This method finds the coordinate of the midpoint of the tile just after the tunnel exit midpoint.
+	 * @return The coordinates of the middle of the tile adjacent to the tunnel exit midpoint
+	 */
 	public static double[] findTunnelExitMidpointPlusTile() {
 		double[] tunnelStartMidpoint = findTunnelMidpoint(true);
 		double[] tunnelExitMidpoint = findTunnelMidpoint(false);
@@ -486,13 +516,27 @@ public class Navigation {
 		return coordinates;
 	}
 	
+	
+	/**
+	 * This method finds the coordinates of the middle of the tiles to the left and right of the exit tunnel
+	 * tile. It does so in order for the robot to move to it and correct both axis' to move through the tunnel smoothly.
+	 * It returns the closest one of the two coordinates hence should be called when about to return. 
+	 * @return	The coordinates the robot will move in to reach the tunnel exit point
+	 */
 	public static double[] findClosestTunnelSideCoordinates() {
-		//then find the upper midpoint of the tiles to the right and left of the tunnel exit
+		
+		//find 
 		double[] tunnelStartMidpoint = findTunnelMidpoint(true);
 		double[] tunnelExitMidpoint = findTunnelMidpoint(false);
 
 		double[] coordinatesRight = new double[2];
 		double[] coordinatesLeft = new double[2];
+		
+		//then find the midpoint of the tiles to the right and left of the tunnel exit
+		//example:
+		// if tunnel is vertical and the robot enters the tunnel facing north
+		//  coordinate 1 (right tile) - increase x and y values by 1 tile
+		//  coordinate 2 (left tile) - decrease x and increase y values by 1 tile
 		if(isTunnelVertical && tunnelStartMidpoint[1] < tunnelExitMidpoint[1]) { 			//north
 			coordinatesRight[0] = tunnelExitMidpoint[0] + SQUARE_SIZE;
 			coordinatesRight[1] = tunnelExitMidpoint[1] + SQUARE_SIZE;
@@ -515,10 +559,10 @@ public class Navigation {
 			coordinatesLeft[1] = tunnelExitMidpoint[1] - SQUARE_SIZE;
 		}
 
-		//whichever one is closer go to it moving perpendicular to tunnel first
 		double myX = odometer.getXYT()[0];
 		double myY = odometer.getXYT()[1];
 
+		//return whichever is closer to move to depedning on current position
 		double[] tileCoordinates = 
 				Math.hypot(coordinatesRight[0] - myX, coordinatesRight[1] - myY) < Math.hypot(coordinatesLeft[0] - myX, coordinatesLeft[1] - myY) 
 				? coordinatesRight : coordinatesLeft;
@@ -526,11 +570,16 @@ public class Navigation {
 	}
 	
 	
-	
-	//TODO
+	/**
+	 * This method travels from the tunnel to the starting corner, expects the robot so have exited the tunnel
+	 * successfuly, turns towards the starting corner and moves to within it by a tile without correction
+	 * @throws OdometerExceptions
+	 */
 	public static void travelTunnelToStart() throws OdometerExceptions {
 		double startCornerCoordX = -1, startCornerCoordY = 1;
 		int startingCorner = RedTeam == 9 ? RedCorner : GreenCorner;
+		
+		//retrieve starting corner coordinates
 		switch(startingCorner) {
 		case 0:
 			startCornerCoordX = field_X_Min*SQUARE_SIZE;
@@ -551,21 +600,21 @@ public class Navigation {
 		}
 		double myX = odometer.getXYT()[0];
 		double myY = odometer.getXYT()[1];
+		//turn to the starting corner
 		turnToCoord(startCornerCoordX, startCornerCoordY, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST);
 		double distance = Math.hypot(startCornerCoordX - myX, startCornerCoordY - myY);
 		distance -= SQUARE_SIZE;
 		setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
+		//move to the starting corner
 		moveStraight(distance, true, false);
 	}
 	
 	
 	
-	
-	
 	/**
 	 * This method assumes the robot is directly on top of one of the 4 intersections
-	 * around the ring set. It turns the robot so that the ring set is facing the left
-	 * of the robot, setting it up for ring detection.
+	 * adjacent to the ring set. It turns the robot so that it is either facing the ringset
+	 * or facing so that the ringset is to the left of the robot for traversal.
 	 */
 	public static void setupHeadingForDetection(boolean straightAhead) {
 		int ringSetX, ringSetY;
@@ -584,31 +633,41 @@ public class Navigation {
 		int y = (int) Math.round(myY);
 		
 		int angle1 = 180, angle2 = 0, angle3 = 90, angle4 = 270;
+		
 		if(straightAhead) {
 			angle1 = 90;
 			angle2 = 270;
 			angle3 = 0;
 			angle4 = 180;
 		}
-		if(ringSetX > x) 
+		
+		
+		if(ringSetX > x) 													//if ringsetX is larger than robot x, its to the left of ringset 
 			turnTo(angle1, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false);
-		else if(ringSetX < x)
+		else if(ringSetX < x) 												//if ringsetX is smaller than robot x, its to the right of ringset
 			turnTo(angle2, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false);
-		else if(ringSetY > y)
+		else if(ringSetY > y) 												//if ringsetY is larger than robot y, its below the ringset
 			turnTo(angle3, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false);
-		else if(ringSetY < y)
+		else if(ringSetY < y) 												//if ringsetY is smaller than robot y, its above the ringset
 			turnTo(angle4, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false);
 		
 		
 	}
 	
 	
-	
+	/**
+	 * This method takes in whether the ringset is to the left or right of the robot upon exiting the tunnel.
+	 * If the ring is to left, go to tile intersection to the right of it relative to robot heading,
+	 * else if ring is to the right, go to tile intersection to the left of it relative to robot heading.
+	 * @param ringSetIsLeft True if ringset is to the left of the robot's current position having just exited the tunnel
+	 * @return	The coordinates of the position the robot should navigate to
+	 */
 	public static double[] getTargetCoordinate(boolean ringSetIsLeft) {
 		
 		double[] tileCoord = new double[2];
 		
 		//if we are red team use red team ring set, else green ring set
+		//retrieve the location of the ring set
 		if(RedTeam == 9) { 	
 			tileCoord[0] = TR_x * SQUARE_SIZE;
 			tileCoord[1] = TR_y * SQUARE_SIZE;
@@ -619,6 +678,10 @@ public class Navigation {
 		
 		double[] tunnelStartMidpoint = findTunnelMidpoint(true);
 		double[] tunnelExitMidpoint = findTunnelMidpoint(false);
+		
+		//depending on the orientation of the tunnel, the coordinate location of the start and end tunnel midpoints,
+		//and whether the ringset is to the left of the robot, retrieve the target coordinate
+		//example: if ringset is to the left, robot exited tunnel and is facing north, increment x coordinate of ring set to get target coordinate
 		if(isTunnelVertical && tunnelStartMidpoint[1] < tunnelExitMidpoint[1]) { 			//north
 			if(ringSetIsLeft) {		// +x -y
 				tileCoord[0] +=  (SQUARE_SIZE);
@@ -651,9 +714,9 @@ public class Navigation {
 	
 
 	/**
-	 * This method uses the game parameters and the robots current heading to
-	 * calculate whether the ring set is to the left or right of the robot
-	 * upon exiting the tunnel
+	 * This method uses the game parameters only to calculate whether the ring set will be to the left
+	 * or to the right of the robot upon exiting the tunnel. It does not depend on the current position
+	 * of the robot so can be called at any moment and return the same result.
 	 * @return : true if ring set is to the left of the robot, false if to the right
 	 */
 	public static boolean isRingSetToLeft() {
@@ -670,19 +733,18 @@ public class Navigation {
 			ringSetY = TG_y;
 		}
 		
-		
 		double[] tunnelStartMidpoint = findTunnelMidpoint(true);
 		double[] tunnelExitMidpoint = findTunnelMidpoint(false);
-		if(isTunnelVertical && tunnelStartMidpoint[1] < tunnelExitMidpoint[1]) { 			//north
+		if(isTunnelVertical && tunnelStartMidpoint[1] < tunnelExitMidpoint[1]) { 			//north - if start midpoint has lower y than exit midpoint
 			if(ringSetX < ((int)tunnelExitMidpoint[0]/SQUARE_SIZE)) 
 				isToLeft = true;
-		} else if (isTunnelVertical && tunnelStartMidpoint[1] > tunnelExitMidpoint[1]) {	//south
+		} else if (isTunnelVertical && tunnelStartMidpoint[1] > tunnelExitMidpoint[1]) {	//south - if start midpoint has higher y than exit midpoint
 			if(ringSetX > ((int)tunnelExitMidpoint[0]/SQUARE_SIZE)) 
 				isToLeft = true;
-		} else if (!isTunnelVertical && tunnelStartMidpoint[0] < tunnelExitMidpoint[0]) {	//east
+		} else if (!isTunnelVertical && tunnelStartMidpoint[0] < tunnelExitMidpoint[0]) {	//east	- if start midpoint has lower x than exit midpoint
 			if(ringSetY > ((int)tunnelExitMidpoint[1]/SQUARE_SIZE)) 
 				isToLeft = true;
-		} else if (!isTunnelVertical && tunnelStartMidpoint[0] > tunnelExitMidpoint[0]) {	//west
+		} else if (!isTunnelVertical && tunnelStartMidpoint[0] > tunnelExitMidpoint[0]) {	//west - if start midpoint has higher x than exit midpoint
 			if(ringSetY < ((int)tunnelExitMidpoint[1]/SQUARE_SIZE)) 
 				isToLeft = true;
 		}
@@ -692,7 +754,7 @@ public class Navigation {
 	
 	/**
 	 * This method gets the current theta heading from the odometer and returns
-	 * the heading of the robot as a string.
+	 * the heading of the robot as either north, south, east, or west.
 	 * @return : returns a String with either "north", "south", "east", "west"
 	 */
 	public static String getCurrentHeading() {
@@ -713,24 +775,20 @@ public class Navigation {
 	
 	
 	/**
-	 * This method makes the robot move in the direction of the
-	 * waypoint whose coordinates are passed as arguments. The robot
-	 * moves until a perpendicular line is crossed where the first sensor
-	 * to cross the line that motor will stop while the other wheel moves until
-	 * that side's sensor picks up the same line, correcting the robots heading.
-	 * The method expects the robot to initially be traveling horizontally or vertically.
-	 * 
-	 * Assumption: the two front light sensors must be polling
-	 * 
-	 * @param x : x coordinate
-	 * @param y : y coordinate
+	 * This method makes the robot move in the direction of the waypoint whose coordinates are passed as arguments. The robot
+	 * moves until a perpendicular line is crossed where the first sensor to cross the line that motor will stop while the other 
+	 * wheel moves until that side's sensor picks up the same line, correcting the robots heading. The method assumes the coordinates 
+	 * given to it will make the robot travel either horizontally or vertically. The method travels with correction until it has arrived ]
+	 * to the target coordinates.
+	 * @param x : target x coordinate
+	 * @param y : target y coordinate
 	 * @throws OdometerExceptions
 	 */ 
 	public static void travelToWithCorrection(double x, double y) throws OdometerExceptions {
 		// Define variables
 		double odo[] = { 0, 0, 0 }, absAngle = 0, dist = 0, deltaX = 0, deltaY = 0;
 		
-		//if it has not arrived move again
+		//if it has not arrived 
 		while(!hasArrived(x, y, 4)) {
 			
 			// Get odometer readings
@@ -746,19 +804,19 @@ public class Navigation {
 			// Get absolute angle the robot must be facing
 			absAngle = Math.toDegrees(Math.atan2(deltaX, deltaY));
 
+			//turn towards coordinates
 			turnTo(absAngle, ROTATE_SPEED_FAST, ROTATE_ACCEL_FAST, false); 
-			
-			
 			
 			setSpeedAcceleration(NAV_WITH_CORR_SPEED, NAV_WITH_CORR_ACCEL);
 			
-			//we either move to a line or to half a tile, if its half move straight without correction
+			//we either move to a perpendicular line or move without correction
+			//if the distance to the waypoint is smaller than a tile size minus an error offset - move without correction
+			//else move with correction
 			if(dist < SQUARE_SIZE - 4 ) {
 				moveStraight(dist, true, false);
 			} else  {
 				
-				//TODO
-				
+				//correct for weight offset
 				leftMotor.rotate(7, true);
 				rightMotor.rotate(-7, false);
 				
@@ -767,6 +825,7 @@ public class Navigation {
 				float[] newColorLeft = new float[leftSampleProvider.sampleSize()];
 				float[] newColorRight = new float[rightSampleProvider.sampleSize()];
 
+				//move until sensors detect perpendicular line
 				leftMotor.forward();
 				rightMotor.forward();
 
@@ -814,6 +873,7 @@ public class Navigation {
 	 * Checks if the robot is within a certain distance from a destination.
 	 * @param xd : x coordinate desitination
 	 * @param yd : y coordinate destination
+	 * @param errorMargin: accepted distance error to target waypoint
 	 * @return : true if its within the distance
 	 * @throws OdometerExceptions
 	 */
@@ -876,7 +936,8 @@ public class Navigation {
 	/**
 	 * This method finds out if the tunnel is vertical or horizontal by observing
 	 * the absolute difference between the tunnels lower left and upper right x values 
-	 * and sets the class variable isTunnelVertical accordingly.
+	 * and sets the class variable isTunnelVertical accordingly. It will also find the tunnel
+	 * heading if the tunnel is of size 1 tile. It sets the static variable isTunnelVertical.
 	 */
 	public static void findTunnelHeading() {
 		int tn_LL_x, tn_UR_x,tn_LL_y, tn_UR_y;
@@ -891,56 +952,47 @@ public class Navigation {
 			tn_LL_y = TNG_LL_y;
 			tn_UR_y = TNG_UR_y;
 		}
+		
+		//if the tunnel is size 1 tile, use the team corner points to check if the tunnel is vertical or horizontal
 		if((Math.hypot(tn_UR_x - tn_LL_x, tn_UR_y - tn_LL_y)*SQUARE_SIZE) < 45) {
 			isOneTile = true;
-			int team_LL_x, team_LL_y, team_UR_x, team_UR_y;
+			int team_LL_y, team_UR_y;
 			int startingCorner = -1;
 			if(RedTeam == 9) {
-				team_LL_x = Red_LL_x; 
 				team_LL_y = Red_LL_y; 
-				team_UR_x = Red_UR_x; 
 				team_UR_y = Red_UR_y; 
 				startingCorner = RedCorner;
 			} else {
-				team_LL_x = Green_LL_x; 
 				team_LL_y = Green_LL_y; 
-				team_UR_x = Green_UR_x; 
 				team_UR_y = Green_UR_y; 
 				startingCorner = GreenCorner;
 			}
 			switch(startingCorner) {
 			case 0:
-				System.out.println("yessss");
 				if(tn_LL_y == team_UR_y) {
 					isTunnelVertical = true;
 				} 
 				break;
 			case 1:
-				System.out.println("entered");
-				System.out.println("" + tn_LL_y);
-				System.out.println("" + team_UR_y);
 				if(tn_LL_y == team_UR_y) 
 					isTunnelVertical = true;
 				break;
 			case 2:
-				System.out.println("yessss");
 				if(tn_UR_y == team_LL_y) {
 					isTunnelVertical = true;
 				}
 				break;
 			case 3:
-				System.out.println("yessss");
 				if(tn_UR_y == team_LL_y) {
 					isTunnelVertical = true;
 				}
 				break;
 			}
-		} else {
-			System.out.println("nooo");
+		} 
+		//otherwise check to see if the tunnel's x have a difference of 2, if so its horizontal, otherwise vertical
+		else {
 			isTunnelVertical = (Math.abs(tn_LL_x - tn_UR_x) == 2) ? false : true;
 		}
-				
-
 	}
 	
 	/**
@@ -986,13 +1038,14 @@ public class Navigation {
 		double[] midpoint1 = {0,0}, midpoint2 = {0,0};
 		
 		//calculate midpoints of both ends of tunnel
+		//if tunnel is vertical then midpoints are the upper coordinate minus 0.5 for the x value
+		// and + 0.5 for the lower coordinate
 		if(isTunnelVertical) {
 			midpoint1[1] = (tunnelLL[1]) * SQUARE_SIZE;
 			midpoint1[0] = (tunnelLL[0] + 0.5) * SQUARE_SIZE;
 			midpoint2[1] = (tunnelUR[1]) * SQUARE_SIZE;
 			midpoint2[0] = (tunnelUR[0] - 0.5) * SQUARE_SIZE;
 		} else {
-			System.out.println("comes here");
 			midpoint1[0] = (tunnelLL[0]) * SQUARE_SIZE;
 			midpoint1[1] = (tunnelLL[1] + 0.5) * SQUARE_SIZE;
 			midpoint2[0] = (tunnelUR[0]) * SQUARE_SIZE;
@@ -1006,46 +1059,48 @@ public class Navigation {
 		else 
 			startingCorner = GreenCorner;
 			
-		double myX, myY;
+		double startX, startY;
 		
 
+		//calculate starting corner coordinates
 		switch(startingCorner) {
 		case 0:
-			myX = (Navigation.SQUARE_SIZE);
-			myY = (Navigation.SQUARE_SIZE);
+			startX = (Navigation.SQUARE_SIZE);
+			startY = (Navigation.SQUARE_SIZE);
 			break;
 		case 1:
-			myX = ((field_X_Max-1) * Navigation.SQUARE_SIZE);
-			myY = (Navigation.SQUARE_SIZE);
+			startX = ((field_X_Max-1) * Navigation.SQUARE_SIZE);
+			startY = (Navigation.SQUARE_SIZE);
 			break;
 		case 2:
-			myX = ((field_X_Max-1) * Navigation.SQUARE_SIZE);
-			myY = ((field_Y_Max-1) * Navigation.SQUARE_SIZE);
+			startX = ((field_X_Max-1) * Navigation.SQUARE_SIZE);
+			startY = ((field_Y_Max-1) * Navigation.SQUARE_SIZE);
 			break;
 		case 3:
-			myX = (Navigation.SQUARE_SIZE);
-			myY = ((field_Y_Max-1) * Navigation.SQUARE_SIZE);
+			startX = (Navigation.SQUARE_SIZE);
+			startY = ((field_Y_Max-1) * Navigation.SQUARE_SIZE);
 			break;
 		default:
-			myX = (Navigation.SQUARE_SIZE);
-			myY = (Navigation.SQUARE_SIZE);
+			startX = (Navigation.SQUARE_SIZE);
+			startY = (Navigation.SQUARE_SIZE);
 			break;
 		}
 
 
-		double dX1 = midpoint1[0] - myX; 
-		double dY1 = midpoint1[1] - myY; 
-		double dX2 = midpoint2[0] - myX; 
-		double dY2 = midpoint2[1] - myY; 
+		double dX1 = midpoint1[0] - startX; 
+		double dY1 = midpoint1[1] - startY; 
+		double dX2 = midpoint2[0] - startX; 
+		double dY2 = midpoint2[1] - startY; 
 
 		// displacement to points
 		double dist1 = Math.hypot(Math.abs(dX1), Math.abs(dY1));
 		double dist2 = Math.hypot(Math.abs(dX2), Math.abs(dY2));
 		
-		//return start or end
-		
+		//start is the midpoint closer to the starting corner
 		double[] startMidpoint  = (dist1 > dist2) ? midpoint2 : midpoint1;
 		double[] endMidpoint = (dist1 < dist2) ? midpoint2 : midpoint1;
+		
+		//return start or end
 		if(start)
 			return startMidpoint;
 		else 
@@ -1053,9 +1108,13 @@ public class Navigation {
 	}
 	
 	
-	
 	/**
-	 * This method find the first line ahead when starting the localization.
+	 * This method expects the robot to be heading perpendicular to a grid line and moves until it finds
+	 * the grid line and localizes on it. 
+	 * @param forwards	True - it localizes on perpendicular line ahead, false - on line behind
+	 * @param speed	Motor speed
+	 * @param acceleration Motor acceleration
+	 * @param shouldWeCorrect Boolean checks to see if we should use correction
 	 * @throws OdometerExceptions
 	 */
 	public static void findLineStraight(boolean forwards, int speed, int acceleration, boolean shouldWeCorrect) throws OdometerExceptions {
@@ -1107,6 +1166,7 @@ public class Navigation {
 		
 		if(shouldWeCorrect) 
 			correctOdometer();
+		
 		moveStraight(SENSOR_OFFSET, true, false);
 	}
 	
@@ -1116,7 +1176,9 @@ public class Navigation {
     /**
 	 * This method causes the robot to turn (on point) to the absolute heading
 	 * theta. This method should turn a MINIMAL angle to its target.
-     * @param theta : theta angle
+     * @param theta : double theta angle
+     * @param speed : int motor speed
+     * @param accel : int motor acceleration
      */
 	public static void turnTo(double theta, int speed, int accel, boolean rightCorrection) {
 		double dTheta = theta - odometer.getXYT()[2];
@@ -1130,19 +1192,14 @@ public class Navigation {
 		else { // turn right
 			leftMotor.rotate(convertAngle( dTheta), true);
 			rightMotor.rotate(-convertAngle( dTheta), false);
-//			if(rightCorrection) {
-//				leftMotor.rotate(RIGHT_TURN_ANGLE_CORRECTION, true);
-//				rightMotor.rotate(-RIGHT_TURN_ANGLE_CORRECTION, false);
-//			}
-
 		}
 	}
 	
 	/**
 	 * This method takes two coordinates and turns the robot to face those coordinates based
 	 * on where the robot currently is.
-	 * @param x
-	 * @param y
+	 * @param x X coordinate to turn to
+	 * @param y Y coordinate to turn to
 	 */
 	public static void turnToCoord(double x, double y, int speed, int accel) {
 		double x0 = odometer.getXYT()[0];
